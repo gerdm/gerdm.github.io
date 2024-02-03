@@ -9,12 +9,10 @@ var xscale = 11;
 var dt = 0.01;
 
 
-
 // Set canvas size to window size
 canvas.width = window.innerWidth;
 canvas.height = 200;
 
-console.log(canvas.width);
 if (canvas.width < 500) {
     var divscale = 0.5;
 } else {
