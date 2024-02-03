@@ -1,17 +1,25 @@
 
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
-var style = 'black';
+var style = "#000000AA";
 
-var treset = 1000;
+var treset = 1500;
 var zscale = 4;
-var xscale = 7;
+var xscale = 11;
 var dt = 0.01;
+
 
 
 // Set canvas size to window size
 canvas.width = window.innerWidth;
 canvas.height = 200;
+
+console.log(canvas.width);
+if (canvas.width < 500) {
+    var divscale = 0.5;
+} else {
+    var divscale = 0.8;
+}
 
 // Set line width
 ctx.lineWidth = 1.0;
@@ -28,14 +36,14 @@ function lorenz(x, y, z) {
     return [dx, dy, dz];
 }
 
-var vmin = -10;
-var vmax = 10;
+var vmin = -5;
+var vmax = 5;
 function random_start() {
     return vmin + (vmax - vmin) * Math.random();
 }
 
 function repos_x(x) {
-    return x * xscale + canvas.width * 0.5;
+    return x * xscale + canvas.width * divscale;
 }
 
 
