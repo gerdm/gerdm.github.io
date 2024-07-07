@@ -8,11 +8,7 @@ PhD student in probabilistic machine learning
 Queen Mary University | Oxford-Man Institute
 
 ### # About
-I'm interested in Bayesian machine learning algorithms for online learning.
-
-### # PhD supervisors
-- [Dr. Kevin P. Murphy](https://www.cs.ubc.ca/~murphyk/)
-- [Dr. Alexander Y. Shestopaloff](https://www.utstat.utoronto.ca/~alexander/)
+I am interested in developing algorithm that can learn from streaming data and adapt to changes in the environment.
 
 ### # Research
 - [Outlier-robust Kalman Filtering through Generalised Bayes](https://arxiv.org/abs/2405.05646)
@@ -30,3 +26,7 @@ I'm interested in Bayesian machine learning algorithms for online learning.
  - [Online training of Bayesian neural networks](https://gerdm.github.io/online-bnn-talk/) — November 2023, stats students’s seminar, University of Edinburgh (online)
  - [One-pass learning methods for Bayesian neural networks](https://gerdm.github.io/qmul-fire-talk-0323) — PhD fire talks 2023, Queen Mary University
 - [Subspace neural bandits](https://probml.github.io/bandits/) — AiStats 2021 (online)
+
+### # PhD supervisors
+- [Dr. Kevin P. Murphy](https://www.cs.ubc.ca/~murphyk/)
+- [Dr. Alexander Y. Shestopaloff](https://www.utstat.utoronto.ca/~alexander/)
