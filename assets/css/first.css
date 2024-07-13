@@ -1,0 +1,15 @@
+
+:root{
+  --maincolor: #0fa1f6;;
+  --bordercl:black;
+  --callouctcolor:dodgerblue;
+  --hovercolor: #0fa1f6;;
+  --darkMaincolor: #50fa7b;
+  }
+  
+.underline {
+    text-decoration: underline;
+  }
+
+/* Make individual display equations scrollable horizontally */
+.katex-display { overflow: auto hidden }

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+	{{ partial "header.html" . }}
+	<body>
+		<div class="content">
+			{{ partial "head.html" . }}
+			
+			{{ with .GetPage `about.md` }}
+			{{ .Content }}
+			{{ end }}
+
+			{{ partial "footer.html" . }}
+		</div>
+		
+	</body>
+</html>

@@ -10,12 +10,17 @@ var xscale = 11;
 var dt = 0.01;
 
 
-// Set canvas size to window size
-canvas.width = window.innerWidth;
 canvas.height = 200;
 
+// Set canvas size to window size
+// canvas.width = window.innerWidth;
+
+//set canvas width to footer width
+var footer = document.getElementsByTagName("footer")[0]
+canvas.width = footer.scrollWidth;
+
 if (canvas.width < 500) {
-    var divscale = 0.5;
+    var divscale = 0.2;
 } else {
     var divscale = 0.8;
 }

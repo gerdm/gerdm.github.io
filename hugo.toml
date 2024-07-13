@@ -1,23 +1,54 @@
 baseURL = 'gerdm.github.io'
 languageCode = 'en-us'
 title = 'Gerardo Duran-Martin'
+theme = "archie"
 
-[[menus.main]]
-name = 'Home'
-pageRef = '/'
-weight = 10
+pygmentsstyle = "friendly"
+pygmentscodefences = true
+pygmentscodefencesguesssyntax = true
 
-[[menus.main]]
-name = 'Posts'
-pageRef = '/posts'
-weight = 20
+[services]
+  [services.googleAnalytics]
+    ID = "G-F409TRWCXC"
 
-[[menus.main]]
-name = 'Tags'
-pageRef = '/tags'
-weight = 30
+[params]
+	customcss = ["css/first.css"]
+	mode = "auto"
+	useCDN = false
+	subtitle = "Maths and machines"
 
-[module]
-  [module.hugoVersion]
-    extended = false
-    min = "0.116.0"
+
+[[params.social]]
+name = "GitHub"
+icon = "github"
+url = "https://github.com/gerdm"
+
+[[params.social]]
+name = "Twitter"
+icon = "twitter"
+url = "https://twitter.com/grrddm/"
+
+[[params.social]]
+name = "Twitter"
+icon = "linkedin"
+url = "https://linkedin.com/in/grrddm/"
+
+[[menu.main]]
+name = "Home"
+url = "/"
+weight = 1
+
+[[menu.main]]
+name = "CV"
+url = "/cv"
+weight = 3
+
+[[menu.main]]
+name = "Posts"
+url = "/posts"
+weight = 4
+
+[[menu.main]]
+name = "Tags"
+url = "/tags"
+weight = 5
