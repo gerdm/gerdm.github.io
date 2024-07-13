@@ -8,10 +8,10 @@ author = "Gerardo Duran-Martin"
 PhD student in probabilistic machine learning  
 Queen Mary University | Oxford-Man Institute
 
-### About
+# About
 I am interested in developing algorithms that learn from streaming data and adapt to changes in the environment.
 
-###  Research
+#  Research
 - [Outlier-robust Kalman Filtering through Generalised Bayes](https://arxiv.org/abs/2405.05646)
     * **G Duran-Martin**, M. Altamirano, A.Y. Shestopaloff, L Sánchez-Betancourt, J. Knoblauch, M Jones, F.X. Briol, K. Murphy @ ICML 2024
 - [Detecting toxic flow](https://arxiv.org/abs/2312.05827)
@@ -21,7 +21,7 @@ I am interested in developing algorithms that learn from streaming data and adap
 - [Efficient online Bayesian inference for neural bandits](https://proceedings.mlr.press/v151/duran-martin22a.html)
     *  **G. Duran-Martin**, A. Kara, K. Murphy @ AiStats 2022
 
-###  Talks
+#  Talks
  - [Outlier-robust Kalman Filtering through Generalised Bayes](https://gerdm.github.io/weighted-likelihood-filter-talk/) — May 2024, UCL Stats PhD seminar
  - [Detecting toxic flow](http://gerdm.github.io/toxic-flow-talk) — November 2023, Oxford-Man institute
  - [Online training of Bayesian neural networks](https://gerdm.github.io/online-bnn-talk/) — November 2023, stats students’s seminar, University of Edinburgh (online)
