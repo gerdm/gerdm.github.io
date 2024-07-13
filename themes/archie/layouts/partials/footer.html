@@ -7,7 +7,8 @@
   </div>
   <div class="footer-info">
     grrddm @
-    {{ dateFormat "2006" now }} {{ with .Site.Copyright }} {{ . }} | {{ end }} | Based on the <a href="https://github.com/athul/archie">Archie theme</a>
+    {{/*  {{ dateFormat "2006" now }} {{ with .Site.Copyright }} {{ . }} | {{ end }} | Based on the <a href="https://github.com/athul/archie">Archie theme</a>  */}}
+    {{ dateFormat "2006" now }} {{ with .Site.Copyright }} {{ . }} | {{ end }}</a>
   </div>
 </footer>
 {{ if not hugo.IsServer }}
