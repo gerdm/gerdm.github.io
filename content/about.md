@@ -9,7 +9,7 @@ PhD student in probabilistic machine learning
 Queen Mary University | Oxford-Man Institute
 
 ### About
-I am interested in developing algorithms learn from streaming data and adapt to changes in the environment.
+I am interested in developing algorithms that learn from streaming data and adapt to changes in the environment.
 
 ###  Research
 - [Outlier-robust Kalman Filtering through Generalised Bayes](https://arxiv.org/abs/2405.05646)
