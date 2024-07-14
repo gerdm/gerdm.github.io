@@ -99,9 +99,10 @@ $$
 We defer the derivation of $(6)$ to the appendix.
 From $(6)$, we see that the KF with SSM $(2)$ is equivalent to the EWMA with $\beta$ replaced by $k_t$,
 i.e., **the KF is an EWMA with a time-varying smoothing factor**.
-The benefit of the KF formulation of the EWMA for the SSM $(2)$ is that it provides a principled way to update the smoothing factor $k_t$
-and provides a way to estimate the uncertainty of the signal $z_t$.
-Furthermore, this formulation allows us to derive the WoLF method for the EWMA.
+The KF formulation of the EWMA from a KF point of view
+(i) provides a principled way to update the smoothing factor $k_t$,
+(ii) and provides a way to estimate the uncertainty of the signal $z_t$, and
+(iii) it allows us to derive the WoLF variant for the EWMA.
 We do this in the next section.
 
 
