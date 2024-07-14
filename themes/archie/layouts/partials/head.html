@@ -11,10 +11,13 @@
 		<script src="{{ .Site.BaseURL }}js/themetoggle.js"></script>
 		{{ end }}
 	</nav>
-	{{/*  {{ if .Params.katex}}{{ partial "katex.html" . }}{{ end }}  */}}
+{{/*  {{ if .Params.katex}}{{ partial "katex.html" . }}{{ end }}  */}}
 
-{{- with resources.Get "js/lorenz.js" }}
-  {{- with . | js.Build }}
+{{/*  Import lorenz.js and set color  */}}
+{{/*  TODO: add if-else on color based on theme  */}}
+{{ $color := "#000000AA" }}
+{{- with resources.Get "js/lorenz.js"}}
+  {{- with . | js.Build (dict "params" (dict "style" $color))}}
     <script defer src="{{ .RelPermalink }}"></script>
   {{- end }}
 {{- end }}

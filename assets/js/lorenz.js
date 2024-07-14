@@ -1,13 +1,21 @@
+// Lorenz attractor in 2D
+// For reference, see https://en.wikipedia.org/wiki/Lorenz_system
+// Author: Gerardo Duran-Martin
 
+import * as params from '@params';
 
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
-var style = "#000000AA";
+var style = params.style;
 
 var treset = 1500;
 var zscale = 4;
 var xscale = 11;
 var dt = 0.01;
+
+var vmin = -5;
+var vmax = 5;
+
 
 
 canvas.height = 200;
@@ -32,6 +40,7 @@ ctx.strokeStyle = style;
 var s = 10;
 var b = 8 / 3;
 var r = 28;
+
 function lorenz(x, y, z) {
     // https://en.wikipedia.org/wiki/Lorenz_system
     let dx = s * (y - x);
@@ -40,8 +49,6 @@ function lorenz(x, y, z) {
     return [dx, dy, dz];
 }
 
-var vmin = -5;
-var vmax = 5;
 function random_start() {
     return vmin + (vmax - vmin) * Math.random();
 }
@@ -63,7 +70,6 @@ var z = random_start();
 
 var xpaint = repos_x(x);
 var zpaint = repos_z(z);
-
 
 var i = 0;
 setInterval(function () {
