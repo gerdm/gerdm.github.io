@@ -20,9 +20,9 @@ var footer = document.getElementsByTagName("footer")[0]
 canvas.width = footer.scrollWidth;
 
 if (canvas.width < 500) {
-    var divscale = 0.2;
+    var divscale = 0.5;
 } else {
-    var divscale = 0.8;
+    var divscale = 0.75;
 }
 
 // Set line width
