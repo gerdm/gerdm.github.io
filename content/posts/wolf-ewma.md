@@ -68,7 +68,7 @@ with ${\cal N}(\cdot \vert \mu, \sigma^2)$ a Gaussian density with mean $\mu$ an
 the posterior density $p(z_t \vert y_{1:t})$ is given by
 {{< math >}}
 $$
-p(z_t \vert y_{1:t}) \propto p(y_t \vert z_t)\,p(z_t \vert y_{1:t-1}) = {\cal N}(z_t \vert m_t, s_t),
+p(z_t \vert y_{1:t}) \propto p(y_t \vert z_t)\,p(z_t \vert y_{1:t-1}) = {\cal N}(z_t \vert m_t, s_t^2),
 \tag{5}
 $$
 {{< /math >}}
@@ -76,8 +76,8 @@ with
 {{< math >}}
 $$
 \begin{aligned}
-k_t &= \frac{s_{t-1} + q_t}{s_{t-1} + q_t + r_t},\\
-s_t &= k_t\,r_t,\\
+k_t &= \frac{s_{t-1}^2 + q_t^2}{s_{t-1}^2 + q_t^2 + r_t^2},\\
+s_t^2 &= k_t\,r_t^2,\\
 m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
 \end{aligned}
 \tag{6}
@@ -99,7 +99,7 @@ consider the SSM $(2)$ with $q_t = q$ and $r_t^2 = r^2 / w_t^2$. Here $q \geq 0$
 With these assumptions, the rate $k_t$ in $(6)$ simplifies to
 {{< math >}}
 $$
-k_t = \frac{s_{t-1} + q}{s_{t-1} + q + r^2 / w_t^2}.
+k_t = \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2}.
 \tag{7}
 $$
 {{< /math >}}
@@ -108,7 +108,7 @@ the rate $k_t$ converges to $0$ faster than $y_t$ tends to $\infty$.
 We obtain
 {{< math >}}
 $$
-m_t \to m_{t-1} \text{ and } s_t \to s_{t-1} \text{ as } y_t \to \infty.
+(m_t \to m_{t-1} \text{ and } s_t^2 \to s_{t-1}^2) \text{ as } y_t \to \infty.
 \tag{8}
 $$
 {{< /math >}}
@@ -124,7 +124,7 @@ w_t = \left(1 + \frac{(y_t - m_{t-1})^2}{c^2}\right)^{-1/2},
 \tag{9}
 $$
 {{< /math >}}
-where $\mu_{t-1}$ is the previous estimate of the signal $z_t$ and $c > 0$ is a fixed hyperparameter.
+where $c > 0$ is the soft threshold.
 
 
 # Numerical experiments
@@ -136,20 +136,20 @@ from numba import njit
 
 @njit
 def imq(err, c):
-    return 1 / np.sqrt(1 + (err / c) ** 2
+    return 1 / np.sqrt(1 + err ** 2 / c)
 
 @njit
 def wolf_step(y, m, s, q, r, c):
     # weight function and rate
     wt = imq(y - m, c) ** 2
-    k = s / (s + q + r ** 2 / wt)
+    k = (s + q) / (s + q + r / wt ** 2)
     # posterior mean and variance
     m = k * y + (1 - k) * m
-    s = k * r ** 2
+    s = k * r
     return m, s
 
 @njit
-def wolf(y, m0, s0, q, r, c):
+def wolf1d(y, m0, s0, q, r, c):
     m = m0
     s = s0
     m_hist = np.zeros_like(y)
@@ -163,6 +163,8 @@ def wolf(y, m0, s0, q, r, c):
 
 
 # Conclusion
+In this post, we showed that the EWMA is a special case of the Kalman filter in a one-dimensional state-space model.
+We derived the WoLF method for the EWMA and showed that it is a robust variant of the EWMA.
 
 [^1]: There are more assumptions in the SSM $(2)$ that we have not mentioned here,
 but the reader can find them in Eubank's 2005 book on SSMs.
