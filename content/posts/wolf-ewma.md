@@ -9,17 +9,19 @@ tldr: "An outlier robust exponentially weighted moving average via the WoLF meth
 ---
 
 Our weighted-observation likelihood filter (WolF) got accepted at ICML 2024.
-Our method, which is provably-robust and easy-to-implement, *robustifies* the Kalman filter (KF)
+Our method *robustifies* the Kalman filter (KF)
 by replacing the classical Gaussian likelihood assumption with a loss function.
+As we show, this modification results in a provably-robust and easy-to-implement KF variant. 
+
 Despite its simplicity, the terminology behind WoLF (similar to the terminology of the KF), might not be familiar to everyone
 and the method might seem a bit abstract for newcomers.
 
 Thus, to show the practical utility of our method,
-we will show how to create a robust variant of the KF that is familiar to most: the exponentially weighted moving average (EWMA).
+we apply the WoLF algorithm to a unidimensional with unit state and measurement function. As we will see, the result is a variant of an algorithm that is familar to most: the exponentially weighted moving average (EWMA).
 
 This post is organlised as follows:
 first, we recap the EWMA.
-Then, we introduce a one-dimensional state-space model (SSM) and show that the EWMA is a special case of the KF in this SSM setting.
+Then, we introduce a one-dimensional state-space model (SSM) and show that the EWMA is a special case of the KF in this setting.
 Next, we derive the WoLF method for an EWMA.
 We conclude this post by showing a numerical experiment that illustrates the robustness of the WoLF method in one-dimensional financial data.
 
@@ -86,16 +88,17 @@ $$
 We defer the derivation of $(6)$ to the appendix.
 From $(6)$, we see that the KF with SSM $(2)$ is equivalent to the EWMA with $\beta$ replaced by $k_t$,
 i.e., **the KF is an EWMA with a time-varying smoothing factor**.
+
 The KF formulation of the EWMA from a KF point of view
-(i) provides a principled way to update the smoothing factor $k_t$,
-(ii) and provides a way to estimate the uncertainty of the signal $z_t$, and
+(i) provides a principled way to determine the smoothing factor $k_t$,
+(ii) provides a way to estimate the uncertainty of the signal $z_t$, and
 (iii) it allows us to derive the WoLF variant for the EWMA.
 We do this in the next section.
 
 
 # The WoLF method for the EWMA
 To create a 1D version of WoLF, we
-consider the SSM $(2)$ with $q_t = q$ and $r_t^2 = r^2 / w_t^2$. Here $q \geq 0$ and $r > 0$ are fixed hyperparameters.
+consider the SSM $(2)$ with $q_t^2 = q^2$ and $r_t^2 = r^2 / w_t^2$. Here $q \geq 0$ and $r > 0$ are fixed hyperparameters.
 With these assumptions, the rate $k_t$ in $(6)$ simplifies to
 {{< math >}}
 $$
@@ -103,7 +106,7 @@ k_t = \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2}.
 \tag{7}
 $$
 {{< /math >}}
-As a consequence, we obtain that as $y_t \to \infty$,
+As a consequence, we obtain that, as $y_t \to \infty$,
 the rate $k_t$ converges to $0$ faster than $y_t$ tends to $\infty$.
 We obtain
 {{< math >}}
@@ -117,7 +120,7 @@ The larger the error, the less information it provides to the estimate $m_t$.
 
 ## Choice of weight function
 The choice of the weight function $w_t$ in $(7)$ is crucial to the robustness of the WoLF method.
-Following the WolF method, we consider the IMQ weight function
+Following the WolF paper, we consider the IMQ weight function
 {{< math >}}
 $$
 w_t = \left(1 + \frac{(y_t - m_{t-1})^2}{c^2}\right)^{-1/2},
@@ -128,7 +131,7 @@ where $c > 0$ is the soft threshold.
 
 
 # Numerical experiments
-Here, we provide an example of the WoLF method for the EWMA.
+Here, we provide an example of the WoLF method for *smoothing* a signal with outliers. 
 First, we define the IMQ weight function $(9)$ and the WoLF method $(7)$.
 ```python
 import numpy as np
@@ -164,7 +167,7 @@ def wolf1d(y, m0, s0, q, r, c):
 
 # Conclusion
 In this post, we showed that the EWMA is a special case of the Kalman filter in a one-dimensional state-space model.
-We derived the WoLF method for the EWMA and showed that it is a robust variant of the EWMA.
+We derived the WoLF method for the EWMA and showed that it is a robust variant of the EWMA because it ignores large and unexpected errors. 
 
 [^1]: There are more assumptions in the SSM $(2)$ that we have not mentioned here,
 but the reader can find them in Eubank's 2005 book on SSMs.
