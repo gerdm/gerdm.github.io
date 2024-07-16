@@ -107,7 +107,8 @@ We do this in the next section.
 
 
 # The WoLF method for the EWMA
-Consider the SSM $(2)$ with fixed $q_t = q$ and $r_t = ...$.
+To create a 1D version of WoLF, we
+consider the SSM $(2)$ with $q_t = q$ and $r_t = r / w_t$. Here $q \geq 0$ and $r > 0$ are fixed hyperparameters.
 
 # Numerical experiments
 
