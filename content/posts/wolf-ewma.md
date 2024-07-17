@@ -63,9 +63,10 @@ m_t = \mathbb{E}[z_t \vert y_{1:t}] = \int z_t\,p(z_t \vert y_{1:t}) dz_t,
 $$
 where $\mathbb{E}[\cdot]$ denotes the expectation operator.
 
-The main quantity of interest in the Kalman filter in this perspective is the posterior distribution $p(z_t \vert y_{1:t})$,
-which we can compute recursively using Bayes' rule.
-Assuming the initial density $p(z_0) = {\cal N}(z_0 \vert m_0, s_0)$,
+From a probabilistic perspetive,
+the main quantity of interest in the Kalman filter is the posterior distribution $p(z_t \vert y_{1:t})$,
+which we compute recursively using Bayes' rule.
+Consider the initial density $p(z_0) = {\cal N}(z_0 \vert m_0, s_0)$,
 with ${\cal N}(\cdot \vert \mu, \sigma^2)$ a Gaussian density with mean $\mu$ and variance $\sigma^2$.
 the posterior density $p(z_t \vert y_{1:t})$ is given by
 {{< math >}}
@@ -89,7 +90,7 @@ We defer the derivation of $(6)$ to the appendix.
 From $(6)$, we see that the KF with SSM $(2)$ is equivalent to the EWMA with $\beta$ replaced by $k_t$,
 i.e., **the KF is an EWMA with a time-varying smoothing factor**.
 
-The KF formulation of the EWMA from a KF point of view
+The KF formulation of the EWMA
 (i) provides a principled way to determine the smoothing factor $k_t$,
 (ii) provides a way to estimate the uncertainty of the signal $z_t$, and
 (iii) it allows us to derive the WoLF variant for the EWMA.
