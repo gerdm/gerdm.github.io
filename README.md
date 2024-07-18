@@ -1,7 +1,3 @@
-# Theme Name
+# gerdm.github.io
 
-## Features
-
-## Installation
-
-## Configuration
+Based on the [Archie Hugo theme](https://github.com/athul/archie)
