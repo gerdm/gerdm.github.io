@@ -131,7 +131,7 @@ The WoLF EWMA is then computed using
 {{< math >}}
 $$
 \begin{aligned}
-k_t &= \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2},
+k_t &= \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2},\\
 s_t^2 &= k_t\,r_t^2,\\
 m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
 \end{aligned}
