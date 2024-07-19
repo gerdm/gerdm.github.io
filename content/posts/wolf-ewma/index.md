@@ -90,12 +90,12 @@ m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
 \tag{6}
 $$
 {{< /math >}}
-We defer the derivation of $(6)$ to the appendix.
 Computing the elements in $(6)$ correspond to the prediction steps of the Kalman filter.
 Hence, from a probabilistic perspective, application of the Kalman filter to the SSM $(2)$
 is equivalent to using Baye's rule to estimate the posterior distribution $p(z_t \vert y_{1:t})$ in a recursive manner.
 Furthermore, we see that the KF applied to the SSM in $(2)$ is equivalent to the EWMA with $\beta$ replaced by $k_t$,
 i.e., **the KF is an EWMA with a time-varying smoothing factor**.
+We defer the derivation of $(6)$ to the appendix.
 
 The KF formulation of the EWMA
 (i) provides a principled way to determine the smoothing factor $k_t$,
@@ -127,13 +127,25 @@ $$
 In other words, with 1D Wolf, large and unexpected errors get discarded.
 The larger the error, the less information it provides to the estimate $m_t$.
 
+The WoLF EWMA is then computed using
+{{< math >}}
+$$
+\begin{aligned}
+k_t &= \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2},
+s_t^2 &= k_t\,r_t^2,\\
+m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
+\end{aligned}
+\tag{9}
+$$
+{{< /math >}}
+
 ## Choice of weight function
 The choice of the weight function $w_t$ in $(7)$ is crucial to the robustness of the WoLF method.
 Following the WolF paper, we consider the IMQ weight function
 {{< math >}}
 $$
 w_t = \left(1 + \frac{(y_t - m_{t-1})^2}{c^2}\right)^{-1/2},
-\tag{9}
+\tag{10}
 $$
 {{< /math >}}
 where $c > 0$ is the soft threshold.
@@ -141,7 +153,7 @@ where $c > 0$ is the soft threshold.
 
 # Numerical experiments
 Here, we provide an example of the WoLF method for *smoothing* a signal when observations are corrupted with outliers.
-First, we define the IMQ weight function $(9)$ and the WoLF method $(7)$ in Python using the Numba library.
+First, we define the IMQ weight function $(10)$ and the WoLF method $(7)$ in Python using the Numba library.
 ```python
 import numpy as np
 from numba import njit
