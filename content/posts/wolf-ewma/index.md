@@ -91,12 +91,12 @@ m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
 \tag{6}
 $$
 {{< /math >}}
-We defer the derivation of $(6)$ to the appendix.
 Computing the elements in $(6)$ correspond to the prediction steps of the Kalman filter.
 Hence, from a probabilistic perspective, application of the Kalman filter to the SSM $(2)$
 is equivalent to using Baye's rule to estimate the posterior distribution $p(z_t \vert y_{1:t})$ in a recursive manner.
 Furthermore, we see that the KF applied to the SSM in $(2)$ is equivalent to the EWMA with $\beta$ replaced by $k_t$,
 i.e., **the KF is an EWMA with a time-varying smoothing factor**.
+We defer the derivation of $(6)$ to the appendix.
 
 The KF formulation of the EWMA
 (i) provides a principled way to determine the smoothing factor $k_t$,
@@ -138,6 +138,18 @@ $$
 {{< /math >}}
 In other words, with 1D Wolf, large and unexpected errors get discarded.
 The larger the error, the less information it provides to the estimate $m_t$.
+
+The WoLF EWMA is then computed using
+{{< math >}}
+$$
+\begin{aligned}
+k_t &= \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2},\\
+s_t^2 &= k_t\,r_t^2,\\
+m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
+\end{aligned}
+\tag{9}
+$$
+{{< /math >}}
 
 
 # Numerical experiments
