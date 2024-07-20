@@ -109,7 +109,7 @@ We do this in the next section.
 To create a 1D version of WoLF, recall that WoLF replaces the $r_t$ in the KF equations $(6)$
 for $r_t^2 = r^2 / w_t^2$ with $w_t: \mathbb{R} \to \mathbb{R}$ a weight function.
 Intuitively, the weight function $w_t$ determines degree of certainty that $y_t$ is an outlier.
-The larger the value of $w_t$, the more certain we are that $y_t$ is an outlier.
+
 Following the WolF paper, in this post, we consider the IMQ weight function
 {{< math >}}
 $$
@@ -147,14 +147,14 @@ k_t &= \frac{s_{t-1}^2 + q^2}{s_{t-1}^2 + q^2 + r^2 / w_t^2},\\
 s_t^2 &= k_t\,r_t^2,\\
 m_t &= k_t\,y_t + (1-k_t)\,m_{t-1}.
 \end{aligned}
-\tag{9}
+\tag{11}
 $$
 {{< /math >}}
 
 
 # Numerical experiments
 Here, we provide a numerical example of the WoLF method for *smoothing* observations that are corrupted with outliers.
-The next block of code defines the IMQ weight function $(8)$ and the WoLF method $(9)$ for the EWMA
+The next block of code defines the IMQ weight function $(8)$ and the WoLF method $(11)$ for the EWMA
 using Python and the Numba library.
 ```python
 import numpy as np
