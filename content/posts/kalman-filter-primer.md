@@ -8,9 +8,6 @@ tags: [kalman-filter, summary]
 tldr: "An introduction to signal-plus-noise models and their best linear estimates."
 ---
 
-In the book "A Kalman Filter Primer" by R.L. Eubank,
-the author provides a _no-frills_ introduction to the Kalman filter.
-
 # Signal plus noise models
 The story of the Kalman filter begins with signal plus noise models.
 By this, we mean that the observations {{< math >}}$y_{1:t}${{< /math >}}
@@ -34,31 +31,24 @@ This means
 $$
 \begin{aligned}
     {\rm Cov}(y_t, f_j) &\neq 0, \\
-    {\rm Cov}(y_t, e_j) &= 0.
+    {\rm Cov}(y_t, e_j) &= \mathbb{1}(t = j)\,{\bf w}_t,
 \end{aligned}
 $$
 {{< /math >}}
-for all $t \neq j$,
-and
-{{< math >}}
-$$
-    {\rm Cov}(e_t, e_t) = {\bf w}_t,
-$$
-{{< /math >}}
-for all $t = 1, \ldots, T$. Here ${\bf w}_t$ is the covariance matrix of the noise at time $t$.
+for all {{< math >}}$t,j \in \{ 1, \ldots, T\}${{< /math >}}.
+Here ${\bf w}_t$ is the covariance matrix of the noise at time $t$.
 
-In other words, having $t \neq j$,
+<!-- In other words, having $t \neq j$,
 information of the signal at time $j$ could be contained in the observation at time $t$.
-However, information of the noise at time $j$ is not contained in the observations at time $t$.
+However, information of the noise at time $j$ is not contained in the observations at time $t$. -->
 
 
-Having access to $y_{1:j}$ for some {{< math >}}$j \in \{1, \ldots, T\}${{< /math >}},
-we seek to find the best linear estimate of the signal at time $t$.
 Suppose
 {{< math >}}$\mathbb{E}[f_k] = 0${{< /math >}} and
 {{< math >}}$\mathbb{E}[{\bf e}_k] = 0${{< /math >}}
 for all $k = 1, \ldots, T$.
-Then, the best linear estimate of the signal at time $t$ is given by
+Then, having access to $y_{1:j}$, for some {{< math >}}$j \in \{1, \ldots, T\}${{< /math >}},
+the best linear predictor (BLUP) of the signal at time $t$ is given by
 {{< math >}}
 $$
     {\bf A}_\text{opt}
@@ -66,10 +56,12 @@ $$
     = {\rm Cov}(f_t, y_{1:j})\,{\rm Var}(y_{1:j})^{-1}.
 $$
 {{< /math >}}
-So that the best linear estimate of the signal at time $t$ is
+As a consequence, the best linear estimate of the signal at time $t$,
+having access to $y_{1:j}$, is
 {{< math >}}
 $$
 \begin{aligned}
+\tag{BLUP.1}
     f_{t|j}
     &= {\bf A}_\text{opt}\,y_{1:j} \\
     &= {\rm Cov}(f_t, y_{1:j})\,{\rm Var}(y_{1:j})^{-1}\,y_{1:j}.
@@ -87,7 +79,62 @@ $$
 
 
 # Introduction of innovations
+One of the main challenges in computing ${\rm (BLUP.1)}$ above is that its computation
+grows quadratically with the number of observations $y_{1:j}$.
+This is because of the term ${\rm Var}(y_{1:j})^{-1}$.
 
-# State-space formulation
+To overcome the above, we introduce the concept of an innovation.
+The innovation at time $t$ is defined as
+{{< math >}}
+$$
+\tag{i.1}
+    \varepsilon_t = y_t - \sum_{k=1}^{t-1} {\rm Cov}(y_t, \varepsilon_k)\,{R}_k^{-1}\,\varepsilon_k.
+$$
+{{< /math >}}
+with $R_k = {\rm Var}(\varepsilon_k)$.
 
-# The fundamental covariance structure
+It can be shown that {{< math >}}${\rm Cov}(\varepsilon_t, \varepsilon_k) = 0${{< /math >}} for all $t \neq k$.
+So that
+{{< math >}}
+$$
+    {\rm Var}(\varepsilon_{1:t}) = {\rm diag}(R_1, \ldots, R_t).
+$$
+{{< /math >}}
+As a consequence,
+{{< math >}}
+$$
+    y_{1:j} = {\bf L}\,\varepsilon_{1:j},
+$$
+{{< /math >}}
+with
+{{< math >}}
+$$
+    {\bf L}_{t,j} =
+    \begin{cases}
+    {\rm Cov}(y_t, \varepsilon_j)\,R_j^{-1} & \text{if } j < t, \\
+    {\bf I} & \text{if } j = t, \\
+    {\bf 0 } & \text{if } j > t.
+    \end{cases}
+$$
+{{< /math >}}
+
+Then, the BLUP of the signal up to index $j$ can be written as
+{{< math >}}
+$$
+\begin{aligned}
+\tag{BLUP.2}
+    f_{t|j}
+    &= {\rm Cov}(f_t, {\bf L}\,\varepsilon_{1:j})\,{\rm Var}({\bf L}\,\varepsilon_{1:j})^{-1}\,{\bf L}\,\varepsilon_{1:j}\\
+    &= \sum_{k=1}^j {\rm Cov}(f_t, \varepsilon_k)\,R_k^{-1}\,\varepsilon_k.
+\end{aligned}
+$$
+{{< /math >}}
+
+And the error variance-covariance matrix of the BLUP takes the form
+{{< math >}}
+$$
+\begin{aligned}
+    S_{t|j} = {\rm Var}(f_t) - \sum_{k=1}^j{\rm Cov}(f_t, \varepsilon_k)\,R_k^{-1}\,{\rm Cov}(\varepsilon_k, f_t).
+\end{aligned}
+$$
+{{< /math >}}
