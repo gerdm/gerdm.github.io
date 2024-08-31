@@ -1,11 +1,13 @@
 ---
-title: "An outlier-robust EWMA"
+title: "A robust exponentially-weighted moving average"
 date: 2024-07-13
 description: "WoLF for robust estimation of an exponentially weighted moving average."
 katex: true
 draft: false
 tags: [kalman-filter, wolf, ewma]
-tldr: "An EWMA is an special case of the KF. The WoLF method is a robust variant of the KF. Here, we create a 1D version of WoLF that resembles the EWMA and is robust to outliers."
+tldr: An exponentially-weighted moving average (EWMA) is an special case of the Kalman filter (KF).
+      The weighted-observation likelihood filter (WoLF) is an outlier-robust variant of the KF.
+      Here, we create a 1D version of WoLF that resembles the EWMA and is robust to outliers.
 ---
 
 Our [weighted-observation likelihood filter (WolF)](https://arxiv.org/abs/2405.05646) got accepted at ICML 2024.
