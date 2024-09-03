@@ -12,14 +12,10 @@ Queen Mary University | Oxford-Man Institute
 I am interested in developing algorithms that learn from streaming data and adapt to changes in the environment.
 
 #  Research
-- [Outlier-robust Kalman Filtering through Generalised Bayes](https://arxiv.org/abs/2405.05646)
-    * **G Duran-Martin**, M. Altamirano, A.Y. Shestopaloff, L Sánchez-Betancourt, J. Knoblauch, M Jones, F.X. Briol, K. Murphy @ ICML 2024
-- [Detecting toxic flow](https://arxiv.org/abs/2312.05827)
-    * A. Cartea, **G. Duran-Martin**, L. Sánchez-Betancourt @ arXiv 2023 (preprint)
-- [Low-rank extended Kalman filtering for online learning of neural networks from streaming data](https://proceedings.mlr.press/v232/chang23a.html)
-    * P.G. Chang, **G. Duran-Martin**., A.Y Shestopaloff, M. Jones, K. Murphy @ CoLLAs 2023
-- [Efficient online Bayesian inference for neural bandits](https://proceedings.mlr.press/v151/duran-martin22a.html)
-    *  **G. Duran-Martin**, A. Kara, K. Murphy @ AiStats 2022
+- [Outlier-robust Kalman Filtering through Generalised Bayes](https://arxiv.org/abs/2405.05646) @ ICML 2024
+- [Detecting toxic flow](https://arxiv.org/abs/2312.05827) @ arXiv 2023 (preprint)
+- [Low-rank extended Kalman filtering for online learning of neural networks from streaming data](https://proceedings.mlr.press/v232/chang23a.html) @ CoLLAs 2023
+- [Efficient online Bayesian inference for neural bandits](https://proceedings.mlr.press/v151/duran-martin22a.html) @ AiStats 2022
 
 #  Talks
  - [Outlier-robust Kalman Filtering through Generalised Bayes](https://gerdm.github.io/weighted-likelihood-filter-talk/) — May 2024, UCL Stats PhD seminar
