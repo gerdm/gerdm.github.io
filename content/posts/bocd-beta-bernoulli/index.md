@@ -13,6 +13,9 @@ tldr:
 
 
 # Introduction
+In a world where conditions constantly change, how can we accurately predict outcomes?
+
+
 ## Flipping coins with fixed probability
 Suppose the following sequence of coin tosses arrive in a stream:
 ```
@@ -102,12 +105,12 @@ What if there was a way to automatically adapt this lookback as the data evolves
 ### Rolling means, regime changes, and Bayes: enter the BOCD
 
 As we've seen, the optimal lookback $\ell$ shifts as time $t$ progresses.
-This raises a critical question: At any given time $t$, how do we determine the _best_ lookback period — 
-the one that most accurately reflects the current data regime?
-Here, _best_ means closest to the true probability, with minimal variance in the estimate.
+This raises a critical question: At any given time $t$, how do we determine the _best_ lookback period?
+Here, the _best_ lookback is the one that most accurately reflects the probability of heads in the current regime.
 
 This is where the Bayesian Online Changepoint Detection (BOCD) algorithm comes into play.
-BOCD works by weighting different lookbacks according to their likelihood,
+As we will see,
+BOCD works by weighting different lookbacks according to their probability,
 allowing it to detect changes in real time and dynamically adjust predictions.
 This real-time adaptability is essential for making accurate predictions in rapidly changing environments.
 
@@ -115,128 +118,166 @@ To fully understand how BOCD operates, especially in the context of binary data,
 In the following section, we'll explore key concepts in Bayesian inference, such as
 conjugate priors, probability distributions, and how these ideas come together to form the foundation of the BOCD algorithm.
 
-
 ---
 
 # The Bayesian perspective
 
-In this section, we'll explore how to apply Bayesian inference to the problem of estimating the probability of heads when flipping a coin.
-Our focus will be entirely on using Bayesian methods to estimate the probability of heads, $\mu$.
+In this section, we'll revisit the problem of estimating the probability of heads using a Bayesian approach.
+Unlike the frequentist method, which provides a single point estimate (e.g., $\mu = 0.3$),
+the Bayesian approach offers a probability distribution over possible values of $\mu$.
+This distribution gives us a richer understanding of our uncertainty about the true probability of heads.
 
-Taking a Bayesian approach to the coin-flipping problem means estimating a probability distribution for the true probability of heads, $\mu$. While the previous method gave us a single estimate for $\mu$,
-the Bayesian approach provides a full distribution over possible values of $\mu$, giving us a more complete picture of our uncertainty.
+The core idea is that instead of estimating $\mu$ as a single number,
+we compute a posterior density over $\mu$,
+which represents our updated beliefs about the probability of heads after observing $t$ coin flips.
+To compute this posterior, we need two key components: the prior and the likelihood.
 
-The distribution over $\mu$ after observing $t$ coin tosses ($y_{1:t}$) is called the posterior density.
-To compute this distribution, we need two key components: the prior and the likelihood.
+### The Prior Density
 
-The likelihood represents the process by which we assume the coin flips are generated.
-For this problem, a natural choice is the Bernoulli distribution, which models the probability of heads as $\mu$:
-{{< math >}}
-$$
-\tag{1}
-    p(y\,\vert\,\mu) = \mu^y\,(1 - \mu)^{1 - y}.
-$$
-{{< /math >}}
-Here, $\mu \in (0,1)$ is the probability of heads.
+The prior density reflects our beliefs about the probability of heads before we observe any data.
+A natural choice for this prior is the Beta distribution,
+which is defined on the interval $(0,1)$, the same interval in which $\mu$ lies.
+The Beta distribution is also convenient because it is conjugate to the Bernoulli likelihood,
+meaning it simplifies the math when we update our beliefs.
+We will come back to this point below.
 
-In the Bayesian framework, we treat $\mu$ as a random variable and assign a _prior_ distribution to it.
-A natural choice for the prior is the Beta distribution,
-which is defined on the interval $(0,1)$ and has convenient mathematical properties when paired with the Bernoulli likelihood.
-
-The Beta density is defined by
+The Beta density is defined as:
 {{< math >}}
 $$
 \tag{2}
     \text{Beta}(\mu\,|\,a,b) = \frac{\Gamma(a)\,\Gamma(b)}{\Gamma(a + b)} \mu^{a-1}(1-\mu)^{b-1}
 $$
 {{< /math >}}
-where $\Gamma(z)$ is the gamma function and $a, b > 0$ are the shape parameters of the density.
+where $\Gamma(z)$ is the gamma function and $a, b > 0$ are shape parameters that control the skewness of the distribution.
 
-The following figure shows the pdf of the Beta distribution for different values of $a$ and $b$.
+The following figure shows the probability density function (pdf) of the Beta distribution for different values of $a$ and $b$.
 ![Beta distribution](beta-density.png)
 
-Note that $a > b$ corresponds to a density that is skewed towards 1 (heads),
-while $a < b$ corresponds to a density that is skewed towards 0 (tails).
-The case $a = b$ corresponds to an equal probability of heads and tails.
+Notice how the shape of the distribution changes based on the relationship between $a$ and $b$:
+- When $a > b$, the density is skewed toward 1 (indicating a higher belief in heads).
+- When $a < b$, the density is skewed toward 0 (indicating a higher belief in tails).
+- When $a = b$, the density is symmetric, indicating equal probability for heads and tails.
 
-Finally, given the likelihood and the prior, the posterior distribution takes the form:
+In the special case where $a = b$,
+the magnitude of $a$ and $b$ reflects how confident we are in this assumption of equal probability.
+Larger values of $a$ and $b$ correspond to stronger prior beliefs,
+meaning we are more certain that the true probability of heads and tails is close to 0.5.
+Conversely, smaller values of $a$ and $b$ indicate weaker prior beliefs, implying more uncertainty around this assumption.
+
+
+### The Likelihood
+
+The likelihood represents the process by which the coin flips are generated.
+ For this problem, the natural choice is the Bernoulli mass function,
+ which takes the form
+{{< math >}}
+$$
+\tag{1}
+    p(y\,\vert\,\mu) = \mu^y\,(1 - \mu)^{1 - y}.
+$$
+{{< /math >}}
+Here, $\mu \in (0,1)$ is the probability of heads, and $y$ is the outcome of a single flip (1 for heads, 0 for tails).
+
+
+### The Posterior Density
+
+With both the prior and likelihood in hand,a we can now compute the posterior density,
+which represents our updated beliefs about $\mu$ after observing $t$ coin flips ($y_{1:t}$).
+This posterior distribution reflects how our beliefs about $\mu$ evolve as we observe more data,
+continuously updating our uncertainty about the true probability of heads.
+
+In general, the posterior density is proportional to the product of the prior and the likelihood:
 {{< math >}}
 $$
     p(\mu\,\vert\,y_{1:t}) \propto p(\mu)\,p(y_{1:t}\,\vert\,\mu).
 $$
 {{< /math >}}
 
+The symbol $\propto$ denotes proportionality, i.e., $f(x) \propto g(x)$ means that
+{{< math >}}$f(x) = c\,g(x)${{< /math >}}
+for some constant $c$ that does not depend on $x$.
+In Bayesian inference,
+this constant $c$ is typically found by normalizing the posterior so that it integrates to 1, ensuring it's a valid probability density.
 
-## Sequential Bayesian update
-Given the likelihood and the prior, we can compute the posterior density of $\mu$ using Bayes' theorem.
-Suppose our prior is Beta with parameters $a_0$ and $b_0$, so that
+By multiplying the prior and likelihood, we obtain a posterior distribution for $\mu$.
+Conveniently, because we're using a Beta prior and Bernoulli likelihood, the resulting posterior is also a Beta distribution.
+This conjugate relationship simplifies the math and makes it easy to update our beliefs as we observe more coin flips.
+
+
+## Sequential Bayesian Update
+Now that we've introduced the posterior density, we turn our attention to updating the posterior sequentially as we observe new data.
+Since coin flips are independent and arrive in a stream,
+the Bayesian approach allows us to update our beliefs step by step as new flips are observed.
+
+To do this, suppose that our prior is Beta with parameters $a_0$ and $b_0$, so that:
 {{< math >}}
 $$
     p(\mu) = \text{Beta}(\mu\,|\,a_0, b_0).
 $$
 {{< /math >}}
-Then, by Bayes' rule, the posterior density of $\mu$ after observing $y_1$ is given by
+
+Then, by Bayes' rule, the posterior density of $\mu$ after observing $y_1$ is given by:
 {{< math >}}
 $$
 \begin{aligned}
     p(\mu\,|\,y_1)
-    &p(\mu)\,\propto p(y_1\,|\,\mu)\\
-    &= {\rm Bern}(y_1\,|\,\mu)\,{\rm Beta}(\mu\,|\,a_0, b_0)\\
-    &\propto \mu^{y_1}(1-\mu)^{1-y_1}\,\mu^{a_0-1}(1-\mu)^{b_0-1}\\
-    &= \mu^{y_1 + a_0 - 1}(1-\mu)^{1-y_1 + b_0 - 1}\\
+    &\propto p(y_1\,|\,\mu)\,p(\mu) \\
+    &= {\rm Bern}(y_1\,|\,\mu)\,{\rm Beta}(\mu\,|\,a_0, b_0) \\
+    &\propto \mu^{y_1}(1-\mu)^{1-y_1}\,\mu^{a_0-1}(1-\mu)^{b_0-1} \\
+    &= \mu^{y_1 + a_0 - 1}(1-\mu)^{1-y_1 + b_0 - 1} \\
     &\propto \text{Beta}(\mu\,|\,a_1, b_1).
 \end{aligned}
 $$
 {{< /math >}}
-with $a_1 = y_1 + a_0$ and $b_1 = 1 - y_1 + b_0$.
-The symbol $\propto$ denotes proportionality, i.e., $f(x) \propto g(x)$ means that
-{{< math >}}$f(x) = c\,g(x)${{< /math >}}
-for some constant $c$ that does not depend on $x$.
 
-From the above, we see that the posterior density of $\mu$ after observing $y_1$ is a Beta density with parameters $a_1$ and $b_1$. 
-This is a general property of the BB-model known as conjugacy.
+with $a_1 = y_1 + a_0$ and $b_1 = 1 - y_1 + b_0$. 
 
-Following the same reasoning,
-we can compute the posterior density of $\mu$, having $p(\mu\,|\,y_1)$ as the prior, after observing $y_2$:
+From the above, we see that the posterior density of $\mu$ after observing $y_1$ is a Beta density with parameters $a_1$ and $b_1$.
+This is a general property of the Beta-Bernoulli model, known as **conjugacy**.
+
+Following the same reasoning, we can compute the posterior density of $\mu$, having $p(\mu\,|\,y_1)$ as the prior, after observing $y_2$:
 {{< math >}}
 $$
 \begin{aligned}
     p(\mu\,|\,y_1, y_2)
-    &\propto p(\mu\,|\,y_1)\,p(y_2\,|\,\mu, y_1)\\
-    &= p(\mu\,|\,y_1)\,p(y_2\,|\,\mu)\\
-    &\propto \mu^{a_1-1}(1-\mu)^{b_1-1}\,\mu^{y_2}(1-\mu)^{1-y_2}\\
-    &= \mu^{a_1 + y_2 - 1}(1-\mu)^{b_1 + 1 - y_2 - 1}\\
+    &\propto p(\mu\,|\,y_1)\,p(y_2\,|\,\mu, y_1) \\
+    &= p(\mu\,|\,y_1)\,p(y_2\,|\,\mu) \\
+    &\propto \mu^{a_1-1}(1-\mu)^{b_1-1}\,\mu^{y_2}(1-\mu)^{1-y_2} \\
+    &= \mu^{a_1 + y_2 - 1}(1-\mu)^{b_1 + 1 - y_2 - 1} \\
     &\propto \text{Beta}(\mu\,|\,a_2, b_2).
 \end{aligned}
 $$
 {{< /math >}}
+
 with $a_2 = a_1 + y_2$ and $b_2 = b_1 + 1 - y_2$.
 
 In general, having a Beta prior at time $t-1$ with parameters $a_{t-1}$ and $b_{t-1}$,
-the posterior density at time $t$ is Beta with parameters
-$a_t = a_{t-1} + y_t$ and $b_t = b_{t-1} + 1 - y_t$.
-Explicitly, the posterior density at time $t$ is given by
+the posterior density at time $t$ is Beta with parameters:
+$$
+a_t = a_{t-1} + y_t \quad \text{and} \quad b_t = b_{t-1} + 1 - y_t.
+$$
+Explicitly, the posterior density at time $t$ is given by:
 {{< math >}}
 $$
 \tag{3}
 \begin{aligned}
     p(\mu\,|\,y_{1:t})
-    &= p(\mu\,|\,y_{1: t-1})\,p(y_t\,|\,\mu)\\
+    &= p(\mu\,|\,y_{1: t-1})\,p(y_t\,|\,\mu) \\
     &= \text{Beta}(\mu\,|\,a_t, b_t).
 \end{aligned}
 $$
 {{< /math >}}
-with $a_t = a_{t-1} + y_t$ and $b_t = b_{t-1} + 1 - y_t$.
-Here, $y_{1:0} = \emptyset$.
+with $a_t = a_{t-1} + y_t$ and $b_t = b_{t-1} + 1 - y_t$. Here, $y_{1:0} = \emptyset$.
 
-A simple Python implementation of the sequential Bayesian update for the BB-model update is given below.
+To see this process in action, we provide a simple Python implementation of the sequential Bayesian update for the Beta-Bernoulli model below.
+This implementation allows us to update our beliefs about $\mu$ as new coin flips are observed in a data stream.
+
 ```python
 def beta_update(a, b, y):
     a_new = a + y
     b_new = b + 1 - y
     return a_new, b_new
 ```
-
 
 ## An example: flipping coins with fixed probability
 Suppose that the following sequence of coin tosses is observed in order:
@@ -366,7 +407,7 @@ The length of the window at time $t$ (usually called the *runlength*) is denoted
 
 Formally, given a sequence of observations $y_{1:t}$ and a window of size
 {{< math >}}$r_t \in \{0, 1, \ldots, t\}${{< /math >}},
-we define the density of $\mu$, conditioned on the window and the observations, as
+we define the density of $\mu$ [^def-rlp], conditioned on the window and the observations, as
 {{< math >}}
 $$
     p(\mu\,\vert\,r_t=k, y_{1:t}) := p(\mu\,\vert\,y_{t-k+1:t}).
@@ -388,3 +429,5 @@ if $r_t = t$, we consider all the observations up to time $t$.
 ## Drawbacks of the BOCD algorithm
 
 # Conclusion
+
+[^def-rlp]: There is a more rigorous argument based on XXXX, but we will follow this much more simplified approach.
