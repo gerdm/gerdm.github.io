@@ -269,7 +269,8 @@ $$
 {{< /math >}}
 with $a_t = a_{t-1} + y_t$ and $b_t = b_{t-1} + 1 - y_t$. Here, $y_{1:0} = \emptyset$.
 
-To see this process in action, we provide a simple Python implementation of the sequential Bayesian update for the Beta-Bernoulli model below.
+To see this process in action, consider the following
+simple Python implementation of the sequential Bayesian update for the Beta-Bernoulli model below.
 This implementation allows us to update our beliefs about $\mu$ as new coin flips are observed in a data stream.
 
 ```python
@@ -280,7 +281,9 @@ def beta_update(a, b, y):
 ```
 
 ## An example: flipping coins with fixed probability
-Suppose that the following sequence of coin tosses is observed in order:
+Let's explore the idea of sequential Bayesian updates with a practical example.
+Suppose we observe the following sequence of coin tosses,
+where the true (but unknown) probability of heads is fixed at 0.3:
 ```
 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0,
@@ -288,28 +291,27 @@ Suppose that the following sequence of coin tosses is observed in order:
 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0,
 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0
 ```
-Here, `1` corresponds to heads and `0` to tails.
 
-Before we start observing the sequence,
-we assume that the (prior) probability of heads is $0.5$.
-However, because we are not sure about this value,
-we consider a prior that has a high variance.
-For instance, we can set $a_0 = b_0 = 3$
-that corresponds to a prior mean of $0.5$ and a confidence interval
-at 95\% of around $[0.15, 0.85]$.
 
-Having specified the prior,
-we make use of $(3)$ to update the posterior density of $\mu$ after each observation.
+For this example,
+we assume that the prior distribution for the probability of heads is a Beta distribution with parameters
+$a_0 = b_0 = 3$.
+This corresponds to a prior mean of $0.5$ and a 95\% credible interval of approximately $[0.15, 0.85]$.
+This prior reflects an initial belief that the coin is likely fair (with a probability of heads around 0.5),
+but we are quite uncertain, allowing for a wide range of possible values.
 
-The following figure shows the posterior density of $\mu$
-as a function of the number of observations.
+With the prior now specified,
+we can proceed to apply the sequential Bayesian update using equation $(3)$,
+allowing us to refine our belief about the probability of heads with each new observation.
+The following figure illustrates how the posterior density of $\mu$ evolves as a function of the number of coin flips.
 ![sequential beta update](beta-update.png)
-We observe that as the number of observations increases,
-the mode of the posterior density converges to a single value
-and the variance decreases.
+As we observe more coin flips, the posterior density becomes more concentrated around a specific value,
+and its variance decreases.
+This reflects the fact that as more data is gathered,
+we become more confident in our estimate of $\mu$.
+In this case, the posterior mode converges to a value close to $0.3$, which is the true probability of heads.
 
-Furthermore, we can compute the *expected posterior probability* that the coin is biased towards heads.
-This is given by
+We can also compute the *expected posterior probability* of heads. This is given by:
 {{< math >}}
 $$
 \begin{aligned}
@@ -320,34 +322,32 @@ $$
 $$
 {{< /math >}}
 
-The following figure shows the expected posterior probability of heads (`1`) as a function of the number of observations.
-The error bounds around the expected value are given by the 50\% credible interval.
+The following figure shows the expected posterior probability of heads (`1`)
+as a function of the number of observations,
+with the error bounds representing the 50% credible interval
+(the Bayesian counterpart to the confidence interval). 
 ![expected posterior probability](./posterior-proba-single.png)
-We observe that the expected posterior probability of heads converges to a value of around $0.3$,
-signifying that the coin is biased towards tails (`0`).
-Furthermore, the uncertainty of this estimate decreases as the number of observations increases.
+We observe that the expected posterior probability of heads converges to around $0.3$,
+indicating that the coin is biased toward tails (`0`).
+Additionally, as more observations are made,
+the uncertainty around this estimate decreases, as shown by the narrowing credible interval.
 
-# What if the probability changes? --- when (iid) Bayesian inference fails
-Suppose now that the probability of heads changes at some point in time.
-For instance, the coin has probability of heads $0.3$ for the first $100$ tosses
-and then changes to $0.6$ for the remaining tosses.
-We call the first toss with a probability of head of $0.6$ a *changepoint*.
+## What if the Probability Changes? — When (iid) Bayesian Inference Fails
+In real-world scenarios, it's common for underlying probabilities to change over time.
+In real-world scenarios, it's common for underlying probabilities to change over time.
+For instance, suppose the probability of heads is $p_1$ for the first 100 tosses and then changes to $p_2$ for the remaining tosses.
+This shift in probability is known as a *changepoint*,
+and the first toss with a probability of heads of $p_1$ marks the moment when the change occurs.
 
-Following an *erroneous* Bayesian reasoning,
-we could hope that, by observing the data sequentially,
-and updating the posterior density of $\mu$ after each observation,
-we could detect the change in the probability of heads
-and adapt our beliefs accordingly.
 
-However, this is not the case for the BB-model.
+At first glance, it might seem intuitive that by using the Bayesian update process, we could sequentially observe the data, detect the changepoint, and adapt our beliefs accordingly. However, this assumption leads to incorrect conclusions when using the Beta-Bernoulli (BB) model.
 
-First, we note that the BB-model assumes that $\mu$ is unknown, but constant.
-Second, the posterior mean of $\mu$ will always consider sums of the observations and the prior.
-This means that if a changepoint were to occur,
-there is no way to weigh the observations before and after the changepoint differently.
+The issue lies in two key assumptions of the BB-model:
 
-## An example
-Consider the following sequence of coin tosses:
+1. **Constant Probability**: The BB-model assumes that the probability of heads, $\mu$, is unknown but constant throughout the entire sequence. It does not account for any changes in the underlying process.
+2. **Equal Weighting of Observations**: The Bayesian update process in the BB-model computes the posterior by summing the prior and all observations equally, regardless of whether a changepoint has occurred. This means the model will continue averaging observations from both before and after the changepoint, without distinguishing between them.
+
+To see an example of this limitation, consider the following sequence of coin tosses, where the first 100 flips have a probability of heads $0.3$, and the last 100 flips have a probability of heads $0.6$:  
 ```
 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0,
@@ -361,35 +361,32 @@ Consider the following sequence of coin tosses:
 1, 1
 ```
 
-The following figure shows the posterior predictive mean of $\mu$ as a function of the number of observations.
-The dashed line indicates the changepoint.
+The following figure shows the expected value of $\mu$ (the posterior mean) as a function of the number of observations. The dashed line indicates the changepoint, where the probability of heads shifts from $0.3$ to $0.6$:
 ![posterior with naive updates](./posterior-proba-changepoint-naive.png)
-We observe that, as expected, the posterior predictive mean of $\mu$ does not update after the changepoint.
-In fact, the uncertainty of the estimate decreases as the number of observations increases.
 
-Does that mean that Bayesian inference is not useful in non-stationary environments?
-Not necessarily.
-It simply means that, assuming an iid model, we cannot hope detect changes in the probability of heads.
+As expected, the posterior mean of $\mu$ continues to update after the changepoint, but it fails to reflect the true change in the underlying probability. This happens because the Beta-Bernoulli model continues to average all observations, smoothing over the changepoint. While the uncertainty of the estimate decreases with more observations, the model never fully adapts to the new probability.
+
+Does this mean that Bayesian inference is not useful in non-stationary environments? Not necessarily. What this example shows is that, under the assumption of an iid model, Bayesian inference using conjugate models cannot detect changes in the underlying probability.
 
 
-# What if the probability changes? --- the best-case scenario
-Suppose that we are told that the probability of heads changes after the $100$-th toss.
-However, we are not told the new probability.
-How can we adapt our beliefs given this new information?
+An important takeaway from the plot above is that the posterior mean closely mirrors the cumulative mean we previously discussed. In fact, when $a_0 = b_0 = 1$, the expected posterior probability matches the cumulative mean exactly.
 
-One way to be *adaptive* in this scenario is to forget all the observations before the changepoint.
-This is because if the probability of heads has changed, then past information is not useful in predicting future outcomes.
-In this scenario, we would like to reset our beliefs after the $100$-th toss and start from scratch, i.e.,
-set $a_{100} = a_0$ and $b_{100} = b_0$.
+We’ve seen that one key strength of the Bayesian approach is its ability to treat variables probabilistically,
+continuously adapting as new data arrives.
+We also explored how rolling time windows can address non-stationarity.
+Now, imagine combining the adaptability of Bayesian inference with the flexibility of rolling windows.
 
-The following figure shows expected posterior probability of heads as a function of the number of observations,
-when the changepoint is known.
-The dashed line indicates the changepoint.
-![posterior with known changepoint position](./posterior-proba-changepoint-known.png)
+To achieve this, we extend our space of random variables to include the lookback period.
+This extension allows us to either dynamically select the optimal lookback window or average across multiple windows,
+weighted by their probabilities.
+
+The result is the Bayesian Online Changepoint Detection (BOCD) algorithm.
+In the next section, we’ll dive deeper into BOCD,
+formalizing these ideas and showing how they come together mathematically.
 
 ---
 
-# The Bayesian Online Changepoint Detection (BOCD) for a Bernoulli-Beta model
+# The Bayesian Online Changepoint Detection (BOCD) for a Bernoulli-Beta model: adaptive lookback windows
 Following the above reasoning, if we knew the position of the changepoint,
 we could simply reset our posterior parameters at the changepoint and
 continue updating our beliefs using the new incoming data.
