@@ -6,7 +6,7 @@ katex: true
 draft: true
 tags: [bocd, simplified, bayesian]
 tldr:
-    A detailed introduction to Bayesian online changepoint detection (BOCD) for binary data
+    A detailed and simplified introduction to Bayesian online changepoint detection (BOCD) for binary data
     modelling using a Beta-Bernoulli model.
 ---
 
@@ -334,13 +334,13 @@ the uncertainty around this estimate decreases, as shown by the narrowing credib
 
 ## What if the Probability Changes? — When (iid) Bayesian Inference Fails
 In real-world scenarios, it's common for underlying probabilities to change over time.
-In real-world scenarios, it's common for underlying probabilities to change over time.
 For instance, suppose the probability of heads is $p_1$ for the first 100 tosses and then changes to $p_2$ for the remaining tosses.
 This shift in probability is known as a *changepoint*,
 and the first toss with a probability of heads of $p_1$ marks the moment when the change occurs.
 
-
-At first glance, it might seem intuitive that by using the Bayesian update process, we could sequentially observe the data, detect the changepoint, and adapt our beliefs accordingly. However, this assumption leads to incorrect conclusions when using the Beta-Bernoulli (BB) model.
+At first glance, it might seem intuitive that by using the Bayesian update process,
+we could sequentially observe the data, detect the changepoint, and adapt our beliefs accordingly.
+However, this assumption leads to incorrect conclusions when using the Beta-Bernoulli (BB) model.
 
 The issue lies in two key assumptions of the BB-model:
 
@@ -364,56 +364,147 @@ To see an example of this limitation, consider the following sequence of coin to
 The following figure shows the expected value of $\mu$ (the posterior mean) as a function of the number of observations. The dashed line indicates the changepoint, where the probability of heads shifts from $0.3$ to $0.6$:
 ![posterior with naive updates](./posterior-proba-changepoint-naive.png)
 
-As expected, the posterior mean of $\mu$ continues to update after the changepoint, but it fails to reflect the true change in the underlying probability. This happens because the Beta-Bernoulli model continues to average all observations, smoothing over the changepoint. While the uncertainty of the estimate decreases with more observations, the model never fully adapts to the new probability.
+As expected, the posterior mean of $\mu$ continues to update after the changepoint,
+but it fails to reflect the true change in the underlying probability.
+This happens because the Beta-Bernoulli model continues to average all observations, smoothing over the changepoint. While the uncertainty of the estimate decreases with more observations, the model never fully adapts to the new probability.
 
 Does this mean that Bayesian inference is not useful in non-stationary environments? Not necessarily. What this example shows is that, under the assumption of an iid model, Bayesian inference using conjugate models cannot detect changes in the underlying probability.
 
-
 An important takeaway from the plot above is that the posterior mean closely mirrors the cumulative mean we previously discussed. In fact, when $a_0 = b_0 = 1$, the expected posterior probability matches the cumulative mean exactly.
 
-We’ve seen that one key strength of the Bayesian approach is its ability to treat variables probabilistically,
-continuously adapting as new data arrives.
-We also explored how rolling time windows can address non-stationarity.
-Now, imagine combining the adaptability of Bayesian inference with the flexibility of rolling windows.
-
-To achieve this, we extend our space of random variables to include the lookback period.
-This extension allows us to either dynamically select the optimal lookback window or average across multiple windows,
-weighted by their probabilities.
-
-The result is the Bayesian Online Changepoint Detection (BOCD) algorithm.
-In the next section, we’ll dive deeper into BOCD,
-formalizing these ideas and showing how they come together mathematically.
 
 ---
 
 # The Bayesian Online Changepoint Detection (BOCD) for a Bernoulli-Beta model: adaptive lookback windows
-Following the above reasoning, if we knew the position of the changepoint,
-we could simply reset our posterior parameters at the changepoint and
-continue updating our beliefs using the new incoming data.
-However, in reality, 
-we do not know when and if a changepoint occurs.
 
-One way to adapt to non-stationary regime changes 
-is to compute the posterior density of $\mu$ at each time step
-considering an increasing *sliding window* of observations.
-A prediction is then made by weighting each sliding-window-estimated posterior density times the probability of the size of the window.
+In previous sections,
+we highlighted the strength of Bayesian inference in
+treating variables probabilistically and continuously updating beliefs as new data arrives.
+We also discussed how rolling time windows can help address non-stationarity by focusing on recent data.
 
-This sliding-window forgetting mechanism is the basis of the Bayesian Online Changepoint Detection (BOCD) algorithm.
-The length of the window at time $t$ (usually called the *runlength*) is denoted by the variable
-{{< math >}}$r_t\{0, \ldots, t\}${{< /math >}}.
+In this section, we introduce a model that combines
+the sequential updating and uncertainty quantification of Bayesian inference with
+the flexibility of rolling time windows.
+To do this, we extend the probabilistic model to include the lookback window $\ell$ as a random variable.
 
-Formally, given a sequence of observations $y_{1:t}$ and a window of size
-{{< math >}}$r_t \in \{0, 1, \ldots, t\}${{< /math >}},
-we define the density of $\mu$ [^def-rlp], conditioned on the window and the observations, as
+This extension enables the model to
+either dynamically select the optimal lookback window or
+average across multiple windows, weighted by their probabilities.
+By incorporating this adaptive lookback,
+the model becomes capable of responding to changepoints in the data and adjusting accordingly.
+
+The resulting algorithm is known as the **Bayesian Online Changepoint Detection (BOCD)**
+and it was first introduced (in the form we present in this post) in the 2007 paper by Adams and Macay.
+In the following sections,
+we formalise the ideas behind BOCD and explain
+how to detect changepoint detection with the Bernoulli-Beta model.
+
+## A probabilistic model for the lookback window
+
+Consider the non-stationary coin-tossing problem.
+Suppose we are at time $t$, with access to the observations $y_{1:t}$,
+and we are told that a *changepoint* occurred $\ell_t \geq 1$ steps ago.
+In other words, the probability of heads for the observations $y_{\ell_t+1:t}$
+is different than that for the earlier observations $y_{1:\ell_t}$.
+Furthermore, the unknown probability of heads remains constant for all coin tosses in the interval
+{{< math >}}$\{\ell_t + 1, \ldots, t\}${{< /math >}}.
+
+With this assumption, we define prior probability of heads,
+conditioned on the history $y_{1:t}$ and the lookback $\ell_t$, as:
 {{< math >}}
 $$
-    p(\mu\,\vert\,r_t=k, y_{1:t}) := p(\mu\,\vert\,y_{t-k+1:t}).
+    p(\mu\,\vert\,\ell_t=k, y_{1:t}) := p(\mu\,\vert\,y_{t-k+1:t}).
 $$
 {{< /math >}}
-So that, 
-if $r_t = 0$, we reset our beliefs and start from scratch,
-if $r_t = 1$, we consider the last observation only,
-if $r_t = t$, we consider all the observations up to time $t$.
+This formulation implies that if $\ell_t = 0$, we start our inference from scratch.
+If $\ell_t = 1$, we base our posterior beliefs solely on the most recent observation.
+If $\ell_t = t$, we use all observations up to time $t$.
+The lookback window $\ell_t$ thus represents how much past data we consider relevant for estimating the current probability of heads.
+[^def-rlp]
+
+Armed with our conditional prior definition,
+we seek to determine the probability of each possible value of the lookback.
+We observe that, at time $t$,
+{{< math >}}$\ell_t \in \{0, 1, \ldots, t\}${{< /math >}}.
+Following a Bayesian formulation, we seek to determine the *posterior mass*
+of the lookback conditioned on the history up to time $t$.
+That is, we seek to evaluate
+
+{{< math >}}
+$$
+    p(\ell_t\vert y_{1:t})
+    = \frac{p(\ell_t, y_{1:t})}{p(y_{1:t})}
+    = \frac{p(\ell_t, y_{1:t})}{\sum_{\ell=0}^t p(\ell, y_{1:t})},
+$$
+{{< /math >}}
+for $\ell_t = 0, \ldots, t$.
+
+Because the space is discrete, we only need to evaluate the joint probability $p(\ell_t, y_{1:t})$
+for all values of $\ell_t$
+and then summing over its values to obtain the posterior mass.
+
+### Estimating the joint density
+Estimation of the joint density following the BOCD algorithm is done recursively.
+For this, we note that the joint density at time $t$ can be rewritten as
+{{< math >}}
+$$
+\begin{aligned}
+    p(\ell_t, y_{1:t})
+    &= \sum_{\ell_{t-1}=0}^{t-1} p(\ell_t, \ell_{t-1}, y_{1:t-1}, y_t)\\
+    &= \sum_{\ell_{t-1}=0}^{t-1}
+    \underbrace{p(\ell_{t-1}, y_{1:t-1})}_\text{(A)} \,
+    \underbrace{ p(\ell_t \vert \ell_{t-1}, y_{1:t-1})}_\text{(B)}\,
+    \underbrace{p(y_t \vert \ell_t, \ell_{t-1}, y_{1:t-1})}_\text{(C)}.
+\end{aligned}
+$$
+{{< /math >}}
+
+Under certain conditions, this will yield a recursive formula.
+We formalise this in the following proposition.
+
+**\*Proposition 1\***  
+Suppose that
+{{< math >}}
+$$
+    p(\ell_t \vert \ell_{t-1}) =
+    \begin{cases}
+    \pi & \text{if } \ell_t = \ell_{t-1} + 1,\\
+    1 - \pi & \text{if } \ell_{t} = 0,\\
+    0 & \text{otherwise},
+    \end{cases}
+$$
+{{< /math >}}
+for $\pi\in(0,1)$.
+Assume that the posterior predictive for $y_t$ is independent of $\ell_{t-1}$, conditioned on $\ell_t$ and $y_{1:t-1}$ i.e.,
+{{< math >}}
+$$
+    p(y_t \vert \ell_t, \ell_{t-1}, y_{1:t-1})
+    = p(y_t \vert \ell_t, y_{1:t-1})
+    = \int p(y_t \vert \theta)\,p(\theta \vert \ell_t, y_{1:t-1}){\rm d}\theta.
+$$
+{{< /math >}}
+Then, the joint density takes the form
+{{< math >}}
+$$
+    p(\ell_t, y_{1:t}) =
+    \left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right)\cdot
+    \begin{cases}
+    p(\ell_{t-1}, y_{1:t-1}) + \log\,(1-\pi) & \ell_{t} = \ell_{t-1} + 1,\\
+    \sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})\,\pi & \ell_{t} = 0.
+    \end{cases}
+$$
+{{< /math >}}
+Alternatively, the log-joint is given by
+{{< math >}}
+$$
+    \log p(\ell_t, y_{1:t}) =
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) + 
+    \begin{cases}
+    \log p(\ell_{t-1}, y_{1:t-1}) + \log\,(1-\pi) & \ell_{t-1} = \ell_t - 1,\\
+    \log p(\ell_{t-1}, y_{1:t-1}) + \log\pi & \ell_{t-1} = 0.
+    \end{cases}
+$$
+{{< /math >}}
 
 ## Probability of the runlength
 ![bocd log-joint](./bocd-log-joint-full.png)
@@ -426,5 +517,37 @@ if $r_t = t$, we consider all the observations up to time $t$.
 ## Drawbacks of the BOCD algorithm
 
 # Conclusion
+
+---
+
+# Appendix
+
+## Proof of Proposition 1
+{{< math >}}
+$$
+    p(\ell_t, y_{1:t}) =
+    \begin{cases}
+        p(y_t \vert \ell_t, y_{1:t-1})\,p(\ell_{t-1}, y_{1:t-1})\,\pi & \text{for } \ell_t \in \{1, \ldots, t\},\\
+        p(y_t \vert \ell_t, y_{1:t-1})\,\sum_{\ell_{t-1}=0}^{t-1} p(\ell_{t-1}, y_{1:t-1})\,(1-\pi) & \text{for } \ell_t=0.
+    \end{cases}
+$$
+{{< /math >}}
+Furthermore, the conditional posterior predictive for the BB model takes the form
+{{< math >}}
+$$
+    p(y_t \vert \ell_t, y_{1:t-1})
+    = \frac{a_{t-\ell_t-1:t-1}}{a_{t-1-\ell_{t-1}-1:t-1} + b_{t-1-\ell_{t-1}-1:t-1}},
+$$
+{{< /math >}}
+where
+{{< math >}}
+$$
+    \begin{aligned}
+    a_{t-\ell_t:t} &= a_0 + \sum_{k=0}^{\ell_t} y_{t-\ell_t+k},\\
+    b_{t-\ell_t:t} &= b_0 + \ell_t - \sum_{k=0}^{\ell_t} y_{t-\ell_t+k},
+    \end{aligned}
+$$
+{{< /math >}}
+are the posterior parameters for the BB model at time $t$, under a runlength of size $\ell$.
 
 [^def-rlp]: There is a more rigorous argument based on XXXX, but we will follow this much more simplified approach.
