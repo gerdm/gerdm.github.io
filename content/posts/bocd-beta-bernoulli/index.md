@@ -520,11 +520,112 @@ the log-joint at time $t-1$, for $r_{t-1} = r_{t} - 1$, i.e., $p(r_t - 1, y_{1:t
 the probability of a increase in the runlength (or no changepoint), i.e., $1 - \pi$; and
 the posterior predictive distribution $p(y_t \vert r_t, y_{1:t-1})$.
 
+### Making predictions
+To recap, the BOCD algorithm estimates the probability of the runlength (lookback window)
+{{< math >}}$\ell_t \in \{0, \ldots, t\}${{< /math >}} given the stream of datapoints $y_{1:t}$.
+We specify this via $p(\ell_t \vert y_{1:t})$. As it turns out, the *posterior density* can be written as
+{{< math >}}
+$$
+    p(\ell_t \vert y_{1:t}) = \frac{p(\ell_t, y_{1:t})}{p(y_{1:t})} = \frac{p(\ell_t, y_{1:t})}{\sum_{\ell_t'=0}^t p(\ell_t', y_{1:t})}.
+$$
+{{< /math >}}
+and the joint density $p(\ell_t, y_{1:t})$ can be computed recursively as a function of $p(\ell_{t-1}, y_{1:t-1})$.
+
 ## Implementation of the BOCD
-In this section, we provide a detailed description on the implementation of Proposition 1.
+Despite the simplicity of the BOCD algorithm, one of the main struggles I faced when reading the original paper is its implementation.
+
+In this section, we provide a detailed description on the implementation of BOCD for the BB-model.
+First, we note that the computational complexity of the algorithm is *linear in time*.
+This means that the amount of computations we have to perform increases by one at each new timestep.
+To see this, consider the array below, which specifies the available data collections to compute $p(\ell_t, y_{1:t})$
+
+{{< math >}}
+$$
+\begin{array}{c|ccccc}
+t & & & & & & \\
+0 & \emptyset & & & & & & \\
+1 & \emptyset & y_1 & & & & & \\
+2 & \emptyset & y_2 & y_{1:2} & & & & \\
+3 & \emptyset & y_3 & y_{2:3} & y_{1:3} & & & \\
+4 & \emptyset & y_4 & y_{3:4} & y_{2:4} & y_{1:4} & & \\
+5 & \emptyset & y_5 & y_{4:5} & y_{3:5} & y_{2:5} & y_{1:5} & \\
+6 & \emptyset & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
+\hline
+\ell_t & 0 & 1 & 2 & 3 & 4 & 5 & 6
+\end{array}
+$$
+{{< /math >}}
+The BOCD algorithm updates the joint from the top-right to the bottom-left
+for $\ell_t > 1$ and from all columns at row $t-1$ to row $t$ for $\ell_t = 0$.
+
+This means that
+$p(\ell_t, y_{1:t})$ gets information from
+
+{{< math >}}
+$$
+\begin{aligned}
+    (\emptyset, y_1) \to p(0, y_{1:2})
+    (\emptyset, y_1) \to p(0, y_{1:2})
+\end{aligned}
+$$
+{{< /math >}}
+
+{{< math >}}
+$$
+\begin{array}{c|ccccc}
+t & & & & & & \\
+0 & \color{orange}{\emptyset} & & & & & & \\
+1 & \color{orange}{\emptyset} & y_1 & & & & & \\
+2 & \color{orange}{\emptyset} & y_2 & y_{1:2} & & & & \\
+3 & \color{orange}{\emptyset} & y_3 & y_{2:3} & y_{1:3} & & & \\
+4 & \color{orange}{\emptyset} & y_4 & y_{3:4} & y_{2:4} & y_{1:4} & & \\
+5 & \color{orange}{\emptyset} & y_5 & y_{4:5} & y_{3:5} & y_{2:5} & y_{1:5} & \\
+6 & \color{orange}{\emptyset} & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
+\hline
+\ell_t & 0 & 1 & 2 & 3 & 4 & 5 & 6
+\end{array}
+$$
+{{< /math >}}
+
+, which means that, for instance,
+the information accrues as follows
+
+
 
 In practice, computing the equations above can lead to numerical underflow.
 To go around this, it is computationally convenient to compute the log-joint-density $\log p(r_t, y_{1:t})$.
+This takes the form
+{{< math >}}
+$$
+    \log p(\ell_t, y_{1:t}) =
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) + 
+    \log(1-\pi)+
+    \log p(\ell_{t-1}, y_{1:t-1})
+$$
+{{< /math >}}
+for $ \ell_{t} = \ell_{t-1} + 1$,
+and
+{{< math >}}
+$$
+\begin{aligned}
+    \log p(\ell_t, y_{1:t})
+    &=
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
+    \log\pi + 
+    \log\left(\sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})\right)\\
+    &=
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
+    \log\pi + 
+    \log\left(\sum_{\ell_{t-1}=0}^{t-1}\exp(\log(p(\ell_{t-1}, y_{1:t-1})))\right)\\
+    &=
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
+    \log\pi + 
+    {\rm logsumexp}\left(\{\log p(\ell_{t-1}, r_{1:t-1})\}_{\ell_{t-1}=0}^{t-1}\right)\\
+\end{aligned}
+$$
+{{< /math >}}
+for $\ell_{t} = 0$.
+
 
 ## Probability of the runlength
 ![bocd log-joint](./bocd-log-joint-full.png)
