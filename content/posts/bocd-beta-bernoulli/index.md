@@ -440,8 +440,8 @@ $$
 for $\ell_t = 0, \ldots, t$.
 
 Because the space is discrete, we only need to evaluate the joint probability $p(\ell_t, y_{1:t})$
-for all values of $\ell_t$
-and then summing over its values to obtain the posterior mass.
+for all values of $\ell_t \in \{0, \ldots, t\}$
+and then normalise over all of the computed values to obtain the posterior probability mass.
 
 ### Estimating the joint density
 Estimation of the joint density following the BOCD algorithm is done recursively.
@@ -487,24 +487,44 @@ Then, the joint density takes the form
 {{< math >}}
 $$
     p(\ell_t, y_{1:t}) =
-    \left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right)\cdot
-    \begin{cases}
-    p(\ell_{t-1}, y_{1:t-1}) + \log\,(1-\pi) & \ell_{t} = \ell_{t-1} + 1,\\
-    \sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})\,\pi & \ell_{t} = 0.
-    \end{cases}
+    \left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right)\,
+    (1-\pi)\,
+    p(\ell_{t-1}, y_{1:t-1})
 $$
 {{< /math >}}
-Alternatively, the log-joint is given by
+for $ \ell_{t} = \ell_{t-1} + 1$,
+and
 {{< math >}}
 $$
-    \log p(\ell_t, y_{1:t}) =
-    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) + 
-    \begin{cases}
-    \log p(\ell_{t-1}, y_{1:t-1}) + \log\,(1-\pi) & \ell_{t-1} = \ell_t - 1,\\
-    \log p(\ell_{t-1}, y_{1:t-1}) + \log\pi & \ell_{t-1} = 0.
-    \end{cases}
+    p(\ell_t, y_{1:t}) =
+    \left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right)\,
+    \pi\,
+    \sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})
 $$
 {{< /math >}}
+for $\ell_{t} = 0$.
+
+Where we have defined the quantities
+{{< math >}}
+$$
+\begin{aligned}
+    a_{t-k:t} &= a_0 + \sum_{j=0}^k y_{t - k + j},\\
+    b_{t-k:t} &= b_0 + k - \sum_{j=0}^k y_{t - k + j}.
+\end{aligned}
+$$
+{{< /math >}}
+
+Proposition 1 shows that, at time $t$, the log-joint $p(r_t, y_{1:t})$ for $r_t > 0$
+is given by the product of
+the log-joint at time $t-1$, for $r_{t-1} = r_{t} - 1$, i.e., $p(r_t - 1, y_{1:t-1})$;
+the probability of a increase in the runlength (or no changepoint), i.e., $1 - \pi$; and
+the posterior predictive distribution $p(y_t \vert r_t, y_{1:t-1})$.
+
+## Implementation of the BOCD
+In this section, we provide a detailed description on the implementation of Proposition 1.
+
+In practice, computing the equations above can lead to numerical underflow.
+To go around this, it is computationally convenient to compute the log-joint-density $\log p(r_t, y_{1:t})$.
 
 ## Probability of the runlength
 ![bocd log-joint](./bocd-log-joint-full.png)
