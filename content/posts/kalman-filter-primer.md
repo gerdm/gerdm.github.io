@@ -1,5 +1,5 @@
 ---
-title: "On signal-plus-noise models"
+title: "Notes on the Kalman filter (I): signal plus noise models"
 date: 2024-08-04
 description: "Primer on the Kalman filter primer."
 katex: true
@@ -15,12 +15,12 @@ can be written as the sum of two components:
 a predictable component
 {{< math >}}$f_{1:t}${{< /math >}}
 and an unpredictable component
-{{< math >}}${\bf e}_{1:t}${{< /math >}}.
+{{< math >}}${e}_{1:t}${{< /math >}}.
 {{< math >}}
 $$
-y_{1:t} =
+\underbrace{y_{1:t}}_\text{measurement} =
     \underbrace{f_{1:t}}_{\text{signal}} + 
-    \underbrace{{\bf e}_{1:t}}_{\text{noise}}.
+    \underbrace{{e}_{1:t}}_{\text{noise}}.
 $$
 {{< /math >}}
 By predictable, we mean that the that the covariance between the measurement and the signal is (not necessarily) non-diagonal.
@@ -36,19 +36,28 @@ $$
 $$
 {{< /math >}}
 for all {{< math >}}$t,j \in \{ 1, \ldots, T\}${{< /math >}}.
-Here ${\bf w}_t$ is the covariance matrix of the noise at time $t$.
+Here ${\bf w}_t$ is the covariance matrix of the noise at time $t$, which
+by definition, is positive definite.
 
-<!-- In other words, having $t \neq j$,
-information of the signal at time $j$ could be contained in the observation at time $t$.
-However, information of the noise at time $j$ is not contained in the observations at time $t$. -->
-
-
-Suppose
+Finally, suppose
 {{< math >}}$\mathbb{E}[f_k] = 0${{< /math >}} and
-{{< math >}}$\mathbb{E}[{\bf e}_k] = 0${{< /math >}}
+{{< math >}}$\mathbb{E}[{e}_k] = 0${{< /math >}}
 for all $k = 1, \ldots, T$.
-Then, having access to $y_{1:j}$, for some {{< math >}}$j \in \{1, \ldots, T\}${{< /math >}},
-the best linear predictor (BLUP) of the signal at time $t$ is given by
+
+## The best-linear unbiased predictor (BLUP)
+Suppose, $j,t\in{\cal T}$.
+We seek to find the matrix ${\bf A} \in \reals^{d\times j}$ that maps from measurements $y_{1:j}$
+to the signal $f_t$ via
+{{< math >}}
+$$
+    {\bf A}\,y_{1:j}.
+$$
+{{< /math >}}
+
+To estimate the linear mapping ${\bf A}$, we minimise the expected L2 error
+between the signal $f_t$ and the linear predictor
+{{< math >}}${\bf A}\,y_{1:j}${{< /math >}}.
+This takes the form
 {{< math >}}
 $$
     {\bf A}_\text{opt}
@@ -138,3 +147,6 @@ $$
 \end{aligned}
 $$
 {{< /math >}}
+
+Equation $(\text{BLUP.2})$ above highlights a key property when working with innovations in estimating the BLUP:
+the information to 
