@@ -9,8 +9,15 @@ tldr: "An introduction to signal-plus-noise models and their best linear estimat
 ---
 
 # Signal plus noise models
+Let
+{{< math >}}${\cal T}\in\{1, 2, \ldots, T\}${{< /math >}}.
+Suppose we run an experiment that lasts $T$ steps, and each step $t$ produces
+an observation $y_t$.
+Suppose further that we run this experiment over multiple trials.
+
 The story of the Kalman filter begins with signal plus noise models.
-By this, we mean that the observations {{< math >}}$y_{1:t}${{< /math >}}
+A signal plus noise model assumes that a sequence of observations
+{{< math >}}$y_{1:t} = (y_1, \ldots, y_t)${{< /math >}}
 can be written as the sum of two components:
 a predictable component
 {{< math >}}$f_{1:t}${{< /math >}}
@@ -90,9 +97,8 @@ $$
 
 
 # Introduction of innovations
-One of the main challenges in computing ${\rm (BLUP.1)}$ above is that the computation
-grows quadratically with the number of observations $y_{1:j}$.
-This is because of the term ${\rm Var}(y_{1:j})^{-1}$,
+Computing ${\rm (BLUP.1)}$ requires a cubic amount of operations as a function of time $t$;
+this is because of the term ${\rm Var}(y_{1:j})^{-1}$,
 which is an $j\times j$ positive definite matrix.
 
 To overcome the above, we introduce the concept of an innovation.
@@ -135,34 +141,73 @@ $$
 $$
 {{< /math >}}
 
-Using $(\text{BLUP.1})$ and $(\text{I.2})$, we see that the BLUP of the signal $f_t$ given $y_{1:j}$
-is given by
+# The BLUP under innovations
+
+## Proposition
+Suppose we have access to the innovations $\varepsilon_{1:j}$ derived from measurements $y_{1:j}$ for some $j\in{\cal T}$.
+Let
+{{< math >}}
+$$
+\tag{G.1}
+    {\bf K}_{t,k} = {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}  
+$$
+{{< /math >}}
+be the *gain* matrix for the signal at time $t$, given the innovation $\varepsilon_k$.
+
+The BLUP of the signal $f_t$ given $\varepsilon_{1:j}$ can be written
+as the sum of linear combinations of gain matrices and innovations:
+{{< math >}}
+$$
+    \tag{BLUP.2}
+    f_{t|j} = \sum_{k=1}^j {\bf K}_{t,k}\,\varepsilon_k.
+$$
+{{< /math >}}
+Furthermore, the error-variance covariance matrix of the BLUP takes the form
 {{< math >}}
 $$
 \begin{aligned}
-\tag{BLUP.2}
+    {\rm Var}(f_t - f_{t|j})
+    = {\rm Var}(f_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
+\end{aligned}
+$$
+{{< /math >}}
+
+### Proof
+Using $(\text{BLUP.1})$ and $(\text{I.2})$, we see that the BLUP of the signal $f_t$ given $y_{1:j}$ is
+{{< math >}}
+$$
+\begin{aligned}
     f_{t|j}
     &= {\rm Cov}(f_t, y_{1:j})\,{\rm Var}(y_{1:j})^{-1}y_{1:j}\\
     &= {\rm Cov}(f_t, {\bf L}\,\varepsilon_{1:j})\,{\rm Var}({\bf L}\,\varepsilon_{1:j})^{-1}\,{\bf L}\,\varepsilon_{1:j}\\
-    &= \sum_{k=1}^j {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    &= \sum_{k=1}^j {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k\\
+    &= \sum_{k=1}^j {\bf K}_{t,k}\,\varepsilon_k,
 \end{aligned}
 $$
 {{< /math >}}
 
-And the error variance-covariance matrix of the BLUP takes the form
+Furthermore, the error variance-covariance matrix of the BLUP takes the form
 {{< math >}}
 $$
 \begin{aligned}
-    S_{t|j} = {\rm Var}(f_t) - \sum_{k=1}^j{\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,{\rm Cov}(\varepsilon_k, f_t).
+    {\rm Var}(f_t - f_{t|j})
+    &= {\rm Var}(f_t) - \sum_{k=1}^j{\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,{\rm Cov}(\varepsilon_k, f_t)\\
+    &= {\rm Var}(f_t) - \sum_{k=1}^j{\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}S_k\,S_k^{-1}\,{\rm Cov}(\varepsilon_k, f_t)\\
+    &= {\rm Var}(f_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
 \end{aligned}
 $$
 {{< /math >}}
 
-Equation $(\text{BLUP.2})$ above highlights a key property when working with innovations in estimating the BLUP:
+{{< math >}} $$ \ \tag*{$\blacksquare$} $$ {{< /math >}}
+
+Equation $(\text{BLUP.2})$ highlights a key property when working with innovations in estimating the BLUP:
 the number of computations to estimate $f_{t|j}$ becomes *linear* in time.
 
 # Filtering, prediction, smoothing, and fixed-lag smoothing
-Armed with $(\text{BLUP.2})$, we define some important quantities of interest when dealing with signal plus noise models.
+Depending on the choice of $j$, and armed with Arrmed with $(\text{BLUP.2})$,
+we define some important quantities of interest when dealing with signal plus noise models.
+The following quantities all seek to estimate the BLUP of the signal $f_t$.
+However, they all consider different time-frames of reference.
 
 ## Filtering
 The term *filtering* refers to the action of filtering-out the noise $e_t$ to estimate the signal $f_t$.
@@ -170,10 +215,13 @@ This is defined as
 {{< math >}}
 $$
 \tag{F.1}
-    f_{t | t} = \sum_{k=1}^t {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    % f_{t | t} = \sum_{k=1}^t {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    f_{t | t} = \sum_{k=1}^t {\bf K}_{t,k}\,\varepsilon_k.
 $$
 {{< /math >}}
 This quantity is one of the most important in the signal-processing theory.
+Given a run of the experiment ran up to time $t$, it produces the best estimate of the signal,
+given the measurements $y_{1:t}$.
 
 
 ## Smoothing
@@ -183,7 +231,8 @@ waits until all measurements have been observed to make an estimate of the signa
 {{< math >}}
 $$
 \tag{F.2}
-    f_{t | T} = \sum_{k=1}^T {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    % f_{t | T} = \sum_{k=1}^T {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    f_{t | T} = \sum_{k=1}^T {\bf K}_{t,k}\,\varepsilon_k.
 $$
 {{< /math >}}
 
@@ -195,7 +244,8 @@ In this sense, we only have to wait $i$ steps before making an estimate of the s
 {{< math >}}
 $$
 \tag{F.3}
-    f_{t | t + i} = \sum_{k=1}^{t+i} {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    % f_{t | t + i} = \sum_{k=1}^{t+i} {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    f_{t | t + i} = \sum_{k=1}^{t+i} {\bf K}_{t,k}\,\varepsilon_k.
 $$
 {{< /math >}}
 
@@ -206,7 +256,8 @@ Here, $i \geq 1.$
 {{< math >}}
 $$
 \tag{F.4}
-    f_{t + i |t} = \sum_{k=1}^{t} {\rm Cov}(f_{t+1}, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    % f_{t + i |t} = \sum_{k=1}^{t} {\rm Cov}(f_{t+1}, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k.
+    f_{t + i | t} = \sum_{k=1}^t {\bf K}_{t+i,k}\,\varepsilon_k.
 $$ 
 {{< /math >}}
 
