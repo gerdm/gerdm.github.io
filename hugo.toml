@@ -13,7 +13,7 @@ pygmentscodefencesguesssyntax = true
 
 [params]
 	customcss = ["css/first.css"]
-	mode = "auto"
+	mode = "light"
 	useCDN = false
 	subtitle = "Maths and machines"
 
