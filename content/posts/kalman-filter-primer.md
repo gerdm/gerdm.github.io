@@ -12,17 +12,18 @@ tldr: "An introduction to signal-plus-noise models and their best linear unbiase
 
 Throughout this post, we denote random variables in capital letters $X$ and
 an in lower-case $x$ a sample of the random variable.
+We defer proofs of the propositions to the appendix.
 
 # Signal plus noise models
 The story of the Kalman filter begins with signal plus noise models.
-A signal plus noise model assumes that a sequence of observations
-{{< math >}}$y_{1:T} = (y_1, \ldots, y_T)${{< /math >}}
+A signal plus noise model assumes that a random process
+{{< math >}}$Y_{1:T} = (Y_1, \ldots, Y_T)${{< /math >}},
 can be written as the sum of two components:
-a predictable component
-{{< math >}}$f_{1:T}${{< /math >}}
-and an unpredictable component
-{{< math >}}${e}_{1:T}${{< /math >}}.
-We assume $(y_t, f_t, e_t) \in {\mathbb R}^d$ for all
+a predictable process
+{{< math >}}$F_{1:T}${{< /math >}}
+and an unpredictable process
+{{< math >}}${E}_{1:T}${{< /math >}}.
+We assume $(Y_t, F_t, E_t) \in {\mathbb R}^d$ for all
 {{< math >}}$t \in {\cal T} = \{1, \ldots, T\}${{< /math >}}
 and $d \geq 1$.
 
@@ -35,8 +36,8 @@ $$
     \underbrace{{E}_{1:T}}_{\text{noise}}.
 $$
 {{< /math >}}
-By predictable signal, we mean that the that the covariance between the measurement and the signal is (not necessarily) non-diagonal.
-By unpredictable noise, we mean that the covariance between the measurement and the noise is diagonal.
+By _predictable_, we mean that the that the covariance between the measurement and the signal is (not necessarily) non-diagonal.
+By _unpredictable_, we mean that the covariance between the measurement and the noise is diagonal.
 This means
 
 {{< math >}}
@@ -55,26 +56,24 @@ Finally, suppose
 {{< math >}}$\mathbb{E}[{E}_t] = 0${{< /math >}}
 for all $t \in {\cal T}$.
 
-Assume that we have access to multiple trials of $(\text{S.1})$,
-each lasting $T$ steps which produces samples $y_{1:T}$.
+Throughout the post, we denote by $Y_{1:t}$ the random process and $y_{1:t}$ a sample of this process.
 
 # The best-linear unbiased predictor (BLUP)
 Suppose, $j,t\in{\cal T}$.
-We seek to find the matrix ${\bf A} \in \reals^{d\times j}$ that maps from measurements $y_{1:j}$
-to the signal $f_t$ so that
+We seek to find the matrix ${\bf A} \in \reals^{d\times j}$ that maps the measurement process $Y_{1:j}$
+to the signal process $F_t$ so that
 {{< math >}}
 $$
-    f_t \approx {\bf A}\,y_{1:j}.
+    F_t \approx {\bf A}\,Y_{1:j}.
 $$
 {{< /math >}}
 That is, we want the matrix ${\bf A}$ that weights all observations up to time $j$.
 Depending on the value of $j$, this estimate takes different names.
 We come back to this point below.
-
 Our notion of approximation is based on the matrix ${\bf A}$ that
 minimises the expected L2 error
-between the signal $f_t$ and the linear predictor
-{{< math >}}${\bf A}\,y_{1:j}${{< /math >}}.
+between the signal $F_t$ and the linear predictor
+{{< math >}}${\bf A}\,Y_{1:j}${{< /math >}}.
 
 We formalise this in the following proposition.
 ### Proposition 1
@@ -88,7 +87,7 @@ $$
 $$
 {{< /math >}}
 As a consequence, the best linear unbiased predictor (BLUP) of the signal at time $t$,
-having access to an observed sample $y_{1:j}$, is
+having access to a sample $y_{1:j}$, is
 {{< math >}}
 $$
 \begin{aligned}
@@ -117,7 +116,8 @@ this is because of the term ${\rm Var}(Y_{1:j})^{-1}$,
 which is a $j\times j$ positive definite matrix that we have to invert.
 
 To go around this computational bottleneck, we introduce the concept of an innovation.
-The innovation of a measurement $y_t$ is defined as
+Here, we assume that $d \ll j$.
+We denote by ${\cal E}_t$ an innovation random variable and $\varepsilon_t$ a sample of the random variable.
 {{< math >}}
 $$
 \tag{I.1}
@@ -129,24 +129,26 @@ $$
 $$
 {{< /math >}}
 with $S_k = {\rm Var}({\cal E}_k)$.
-Here, ${\cal E}_t$ refers to the random variable of the innovation and $\varepsilon_t$ refers to a sample of the random vector.
 
-One of the main advantages of the innovation process is that they are decorrelated among one another.
-In this sense
+One of the main advantages of the innovation process is that they are decorrelated, i.e.,
 {{< math >}}
 $$
     {\rm Cov}({\cal E}_t, {\cal E}_j)=
     \begin{cases}
-    0 & \text{if } t\neq j\\
+    0 & \text{if } t\neq j,\\
     S_t & \text{if } t = j.
     \end{cases}
 $$
 {{< /math >}}
 As we will see, this property of the innovations will allows us to compute $(\text{BLUP.1})$
 in $O(j d^3)$ operations.
+We formalise this in the following proposition
 
 ### Proposition 2
-It can be shown that {{< math >}}${\rm Cov}({\cal E}_t, {\cal E}_k) = 0${{< /math >}} for all $t \neq k$
+Let $Y_{1:j}$ be a signal-plus-noise random process and
+{{< math >}}${\cal E}_{1:j}${{< /math >}} be the innovation process derived from $Y_{1:j}$.
+Then,
+{{< math >}}${\rm Cov}({\cal E}_t, {\cal E}_k) = 0${{< /math >}} for all $t \neq k$
 and
 {{< math >}}
 $$
@@ -154,7 +156,7 @@ $$
 $$
 {{< /math >}}
 
-It can also be shown that the relationship between innovations and measurements satisfy
+Furthermore, the innovation process and the measurement process satisfy
 {{< math >}}
 $$
 \tag{I.2}
@@ -166,7 +168,7 @@ with ${\bf L}$ a lower-triangular matrix with elements
 $$
     {\bf L}_{t,j} =
     \begin{cases}
-    {\rm Cov}(y_t, \varepsilon_j)\,S_j^{-1} & \text{if } j < t, \\
+    {\rm Cov}(Y_t, {\cal E}_j)\,S_j^{-1} & \text{if } j < t, \\
     {\bf I} & \text{if } j = t, \\
     {\bf 0 } & \text{if } j > t.
     \end{cases}
@@ -176,15 +178,15 @@ $$
 # The BLUP under innovations
 
 ## Proposition 3
-Suppose we have access to the innovations $\varepsilon_{1:j}$ derived from measurements $y_{1:j}$ for some $j\in{\cal T}$.
+Suppose we have access to innovations $\varepsilon_{1:j}$ derived from measurements $y_{1:j}$ for some $j\in{\cal T}$.
 Let
 {{< math >}}
 $$
 \tag{G.1}
-    {\bf K}_{t,k} = {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}  
+    {\bf K}_{t,k} = {\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}  
 $$
 {{< /math >}}
-be the *gain* matrix for the signal at time $t$, given the innovation $\varepsilon_k$.
+be the *gain* matrix for the signal $F_t$, given the innovation ${\cal E}_k$.
 
 The BLUP of the signal $f_t$ given $\varepsilon_{1:j}$ can be written
 as the sum of linear combinations of gain matrices and innovations:
@@ -209,10 +211,10 @@ Equation $(\text{BLUP.2})$ highlights a key property when working with innovatio
 the number of computations to estimate $f_{t|j}$ becomes *linear* in time.
 
 # Filtering, prediction, smoothing, and fixed-lag smoothing
-Depending on the choice of $j$, and armed with Arrmed with $(\text{BLUP.2})$,
-we define some important quantities of interest when dealing with signal plus noise models.
-The following quantities all seek to estimate the BLUP of the signal $f_t$.
-However, they all consider different time-frames of reference.
+Recall that our quantity of interest takes the form $(\text{BLUP.2})$.
+Depending on our frame of reference, which depends on the choice of $j$,
+and hence how much information we have to make an estimate of the signal process,
+we can come up with different BLUP estimates for the unknown signal $f_t$.
 
 ## Filtering
 The term *filtering* refers to the action of filtering-out the noise $e_t$ to estimate the signal $f_t$.
@@ -225,12 +227,12 @@ $$
 $$
 {{< /math >}}
 This quantity is one of the most important in the signal-processing theory.
-Given a run of the experiment ran up to time $t$, it produces the best estimate of the signal,
+Given a run of the experiment ran up to time $t$, filtering produces the best estimate of the signal,
 given the measurements $y_{1:t}$.
 
 We exemplify filtering in the table below.
-The top row shows the point in time to compute the estimate,
-the *signal* row shows in $\color{#00B7EB}\text{cyan}$ the target signal;
+The top row shows the point in time in which the estimate is computed;
+the *signal* row shows in $\color{#00B7EB}\text{cyan}$ the target signal that we seek to obtain from the measurement;
 finally the bottom row shows in $\color{orange}\text{orange}$ the measurements to consider to estimate the BLUP.
 
 {{< math >}}
@@ -376,12 +378,12 @@ Using $(\text{BLUP.1})$ and $(\text{I.2})$, we see that
 $$
 \begin{aligned}
     {\bf A}_\text{opt}
-    &= {\rm Cov}(f_t, y_{1:j})\,{\rm Var}(y_{1:j})^{-1}\\
-    &= {\rm Cov}(f_t, {\bf L}\,\varepsilon_{1:j})\,{\rm Var}({\bf L}\,\varepsilon_{1:j})^{-1}\\
-    &= {\rm Cov}(f_t, \varepsilon_{1:j})\,{\bf L}^\intercal\,\{{\bf L}{\rm Var}(\varepsilon_{1:j}){\bf L}^\intercal\}^{-1}\\
-    &= {\rm Cov}(f_t, \varepsilon_{1:j})\,{\bf L}^\intercal\,{\bf L}^{-\intercal}\, {\rm Var}(\varepsilon_{1:j})^{-1}{\bf L}^{-1}\\
-    &= {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:j})^{-1}{\bf L}^{-1}\\
-    &= {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Diag}(S_1, \ldots, S_j)^{-1}{\bf L}^{-1}.
+    &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(y_{1:j})^{-1}\\
+    &= {\rm Cov}(F_t, {\bf L}\,{\cal E}_{1:j})\,{\rm Var}({\bf L}\,{\cal E}_{1:j})^{-1}\\
+    &= {\rm Cov}(F_t, {\cal E}_{1:j})\,{\bf L}^\intercal\,\{{\bf L}{\rm Var}({\cal E}_{1:j}){\bf L}^\intercal\}^{-1}\\
+    &= {\rm Cov}(F_t, {\cal E}_{1:j})\,{\bf L}^\intercal\,{\bf L}^{-\intercal}\, {\rm Var}({\cal E}_{1:j})^{-1}{\bf L}^{-1}\\
+    &= {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:j})^{-1}{\bf L}^{-1}\\
+    &= {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Diag}(S_1, \ldots, S_j)^{-1}{\bf L}^{-1}.
 \end{aligned}
 $$
 {{< /math >}}
@@ -391,10 +393,10 @@ $$
 \begin{aligned}
     f_{t|j}
     &= {\bf A}_\text{opt}\,y_{1:j}\\
-    &= {\rm Cov}(f_t, y_{1:j})\,{\rm Var}(y_{1:j})^{-1}\,y_{1:j}\\
-    &= {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Diag}(S_1, \ldots, S_j)^{-1}{\bf L}^{-1}\,{\bf L}\,\varepsilon_{1:j}\\
-    &= {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Diag}(S_1, \ldots, S_j)^{-1}\,\varepsilon_{1:j}\\
-    &= \sum_{k=1}^j {\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\,\varepsilon_k\\
+    &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}\,y_{1:j}\\
+    &= {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Diag}(S_1, \ldots, S_j)^{-1}{\bf L}^{-1}\,{\bf L}\,\varepsilon_{1:j}\\
+    &= {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Diag}(S_1, \ldots, S_j)^{-1}\,\varepsilon_{1:j}\\
+    &= \sum_{k=1}^j {\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}\,\varepsilon_k\\
     &= \sum_{k=1}^j {\bf K}_{t,k}\,\varepsilon_k.
 \end{aligned}
 $$
@@ -404,30 +406,30 @@ Furthermore, the error variance-covariance matrix of the BLUP takes the form
 {{< math >}}
 $$
 \begin{aligned}
-    &{\rm Var}(f_t - f_{t|j})\\
-    &= {\rm Var}(f_t) - {\bf A}_\text{opt}\,{\rm Var}\,(y_{1:j})\,{\bf A}_\text{opt}^\intercal\\
-    &= {\rm Var}(f_t) -
-    {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:t})^{-1}{\bf L}^{-1}
-    \{{\bf L}{\rm Var}(\varepsilon_{1:j}){\bf L}^\intercal\}
-    \left({\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:t})^{-1}{\bf L}^{-1}\right)^\intercal\\
-    &= {\rm Var}(f_t) -
-    {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:t})^{-1}{\bf L}^{-1}
-    {\bf L}{\rm Var}(\varepsilon_{1:j}){\bf L}^\intercal
-    \left({\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:t})^{-1}{\bf L}^{-1}\right)^\intercal\\
-    &= {\rm Var}(f_t) -
-    {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:t})^{-1}{\bf L}^{-1}
-    {\bf L}{\rm Var}(\varepsilon_{1:j}){\bf L}^\intercal\,
-    {\bf L}^{-\intercal}\,{\rm Var}(\varepsilon_{1:t})^{-1}\,{\rm Cov}(\varepsilon_{1:j}, f_t)\\
-    &= {\rm Var}(f_t) -
-    {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm Var}(\varepsilon_{1:t})^{-1}{\rm Var}(\varepsilon_{1:j})\,
-    {\rm Var}(\varepsilon_{1:t})^{-1}\,{\rm Cov}(\varepsilon_{1:j}, f_t)\\
-    &= {\rm Var}(f_t) -
-    {\rm Cov}(f_t, \varepsilon_{1:j})\, {\rm diag}(S_1, \ldots, S_j)^{-1}
+    &{\rm Var}(F_t - f_{t|j})\\
+    &= {\rm Var}(F_t) - {\bf A}_\text{opt}\,{\rm Var}\,(Y_{1:j})\,{\bf A}_\text{opt}^\intercal\\
+    &= {\rm Var}(F_t) -
+    {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\bf L}^{-1}
+    \{{\bf L}{\rm Var}({\cal E}_{1:j}){\bf L}^\intercal\}
+    \left({\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\bf L}^{-1}\right)^\intercal\\
+    &= {\rm Var}(F_t) -
+    {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\bf L}^{-1}
+    {\bf L}{\rm Var}({\cal E}_{1:j}){\bf L}^\intercal
+    \left({\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\bf L}^{-1}\right)^\intercal\\
+    &= {\rm Var}(F_t) -
+    {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\bf L}^{-1}
+    {\bf L}{\rm Var}({\cal E}_{1:j}){\bf L}^\intercal\,
+    {\bf L}^{-\intercal}\,{\rm Var}({\cal E}_{1:t})^{-1}\,{\rm Cov}({\cal E}_{1:j}, F_t)\\
+    &= {\rm Var}(F_t) -
+    {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\rm Var}({\cal E}_{1:j})\,
+    {\rm Var}({\cal E}_{1:t})^{-1}\,{\rm Cov}({\cal E}_{1:j}, F_t)\\
+    &= {\rm Var}(F_t) -
+    {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm diag}(S_1, \ldots, S_j)^{-1}
     {\rm diag}(S_1, \ldots, S_j)\,
-    {\rm diag}(S_1, \ldots, S_j)^{-1}\,{\rm Cov}(\varepsilon_{1:j}, f_t)\\
-    &= {\rm Var}(f_t) - \sum_{k=1}^j{\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}S_k\,S_k^{-1}\,{\rm Cov}(\varepsilon_k, f_t)\\
-    &= {\rm Var}(f_t) - \sum_{k=1}^j \left({\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\right)S_k\,\left({\rm Cov}(f_t, \varepsilon_k)\,S_k^{-1}\right)^\intercal\\
-    &= {\rm Var}(f_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
+    {\rm diag}(S_1, \ldots, S_j)^{-1}\,{\rm Cov}({\cal E}_{1:j}, F_t)\\
+    &= {\rm Var}(F_t) - \sum_{k=1}^j{\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}S_k\,S_k^{-1}\,{\rm Cov}({\cal E}_k, F_t)\\
+    &= {\rm Var}(F_t) - \sum_{k=1}^j \left({\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}\right)S_k\,\left({\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}\right)^\intercal\\
+    &= {\rm Var}(F_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
 \end{aligned}
 $$
 {{< /math >}}
