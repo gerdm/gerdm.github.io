@@ -39,8 +39,7 @@ $$
 $$
 {{< /math >}}
 for all {{< math >}}$t,j \in {\cal T}${{< /math >}}.
-Here ${\bf R}_t$ is the  known covariance matrix of the noise process at time $t$, which
-by definition, is positive definite.
+Here ${\bf R}_t$ is the  known covariance matrix of the noise process at time $t$, which is positive definite.
 
 We write a signal-plus-noise process as
 {{< math >}}
@@ -66,7 +65,7 @@ We assume that running an experiment produces $y_{1:T}$, $f_{1:T}$, and $e_{1:T}
 However, we only have access to the *measurements* $y_{1:T}$.
 
 
-Suppose, $(j,t)\in{\cal T}$
+Suppose, $(j,t)\in{\cal T}^2$
 and we are given a subset of the sampled measurements $y_{1:j} = (y_1, \ldots, y_j)$.
 We seek to find the matrix ${\bf A} \in \reals^{d\times j}$ that maps $y_{1:j}$
 to the (unobserved) signal $f_t$. We write this estimate by
@@ -87,9 +86,10 @@ between the signal process $F_t$ and the *prediction process*
 Having found this matrix ${\bf A}$, the prediction ${\bf A}y_{1:t}$ is called
 best linear unbiased predictor (BLUP).
 
-We formalise this idea in the following proposition.
+We formalise thie idea in the proposition below.
+
 ### Proposition 1
-Suppose, $(j,t)\in{\cal T}$.
+Suppose, $(j,t)\in{\cal T}^2$.
 Let $Y_{1:j}$ be a subset of the measurement process and $F_t$ be signal process at time $t$.
 The linear mapping ${\bf A}$ that minimises the L2 error between the signal random variable $F_{t}$
 and the subset of the measurement process $Y_{1:j}$ takes the form
@@ -113,8 +113,8 @@ $$
 $$
 {{< /math >}}
 
-Finally,
-the error variance-covariance matrix of the BLUP is
+Furthermore,
+the error variance-covariance matrix of the BLUP is defined by
 {{< math >}}
 $$
 \tag{EVC.1}
@@ -123,28 +123,44 @@ $$
 {{< /math >}}
 
 
-
 # The innovation process
-Computing ${\rm (BLUP.1)}$ requires a cubic amount of operations as a function of time $j$;
+Assume that $d \ll j$, i.e., the dimension of the measurements is much lower than the number of timesteps $j$.
+Then, computing ${\rm (BLUP.1)}$ requires $O(j^3)$ operations ---
 this is because of the term ${\rm Var}(Y_{1:j})^{-1}$,
-which is a $j\times j$ positive definite matrix that we have to invert.
-Because we assume that $d \ll j$.
+which is a $j\times j$ positive definite matrix that we have to invert at every timeframe $j$.
 
-To go around this computational bottleneck, we introduce the concept of an innovation.
-We denote by ${\cal E}_t$ an innovation random variable and $\varepsilon_t$ a sample of the random variable.
+To go around this computational bottleneck, we introduce the concept of an innovation,
+which decorrelates measurements and allows for a more efficient computation of $(\text{BLUP.1})$.
+Denote by
+{{< math >}}${\cal E}_t${{< /math >}}
+an innovation random variable and $\varepsilon_t$ a sample of the random variable.
+
+The innovation random variable
+{{< math >}}${\cal E}_t${{< /math >}},
+derived from the measurement random variable $Y_{t}$ and the innovation process 
+{{< math >}}${\cal E}_{1:t-1}${{< /math >}},
+is defined by
 {{< math >}}
 $$
 \tag{I.1}
-    \varepsilon_t =
+    {\cal E}_t =
     \begin{cases}
-        y_1 & \text{for } t = 1,\\
-        y_t - \sum_{k=1}^{t-1} {\rm Cov}(Y_t, {\cal E}_k)\,{S}_k^{-1}\,\varepsilon_k & \text{for } t \geq 2,
+        Y_1 & \text{for } t = 1,\\
+        Y_t - \sum_{k=1}^{t-1} {\rm Cov}(Y_t, {\cal E}_k)\,{S}_k^{-1}\,{\cal E}_k & \text{for } t \geq 2,
     \end{cases}
 $$
 {{< /math >}}
-with $S_k = {\rm Var}({\cal E}_k)$.
+As we see, the innovation process
+{{< math >}}${\cal E}_{1:t}${{< /math >}}
+is built *sequentially*.
 
-One of the main advantages of the innovation process is that they are decorrelated, i.e.,
+We show some properties of the innovation process in the following proposition
+
+
+### Proposition 2
+Let $Y_{1:j}$ be a signal-plus-noise random process and
+{{< math >}}${\cal E}_{1:j}${{< /math >}} be the innovation process derived from $Y_{1:j}$.
+Then,
 {{< math >}}
 $$
     {\rm Cov}({\cal E}_t, {\cal E}_j)=
@@ -154,23 +170,9 @@ $$
     \end{cases}
 $$
 {{< /math >}}
-As we will see, this property of the innovations will allows us to compute $(\text{BLUP.1})$
-in $O(j d^3)$ operations.
-We formalise this in the following proposition
+with $S_j = {\rm Var}({\cal E}_j)$.
 
-### Proposition 2
-Let $Y_{1:j}$ be a signal-plus-noise random process and
-{{< math >}}${\cal E}_{1:j}${{< /math >}} be the innovation process derived from $Y_{1:j}$.
-Then,
-{{< math >}}${\rm Cov}({\cal E}_t, {\cal E}_k) = 0${{< /math >}} for all $t \neq k$,
-{{< math >}}
-$$
-    {\rm Var}({\cal E}_{1:t}) = {\rm diag}(S_1, \ldots, S_t),
-$$
-{{< /math >}}
-and $S_j = {\rm Var}({\cal E}_j)$.
-
-Furthermore, the innovation process and the measurement process satisfy
+Furthermore, the measurement process and the innovation process satisfy the relationship
 {{< math >}}
 $$
 \tag{I.2}
@@ -188,6 +190,17 @@ $$
     \end{cases}
 $$
 {{< /math >}}
+
+## Building an innovation sample
+
+The terms $(\text{I.1})$ and $(\text{I.2})$ provide two ways to estimate a sample of innovations $\varepsilon_{1:j}$
+given a sample of measurements $y_{1:j}$:
+1. estimate $\varepsilon_t$ sequentially given $y_t$ and $\varepsilon_{1:t-1}$
+following $(\text{I.1})$;
+2. wait until we have access to $y_{1:T}$, and then compute the matrix ${\bf L}$ to solve the system of linear equations
+{{< math >}}${\bf L}\,\varepsilon_{1:T} = y_{1:T}${{< /math >}} for the unknown vector $\varepsilon_{1:T}$, following $(\text{I.2})$.
+
+Case 1. is *online* and case 2. is *offline*.
 
 # The BLUP under innovations
 
@@ -223,6 +236,7 @@ $$
 
 Equation $(\text{BLUP.2})$ highlights a key property when working with innovations in estimating the BLUP:
 the number of computations to estimate $f_{t|j}$ becomes *linear* in time.
+Furthermore, computing $(\text{BLUP.2})$ now requires $O(j d^3)$ operations.
 
 # Filtering, prediction, smoothing, and fixed-lag smoothing
 Recall that our quantity of interest takes the form $(\text{BLUP.2})$,
@@ -233,8 +247,8 @@ In this section, we classify various BLUP estimates $f_{t|j}$ as a function of t
 As we will see, the choice of $j$ can serve different purposes.
 
 ## Filtering
-The term *filtering* refers to the action of filtering-out the noise $e_t$ to estimate the signal $f_t$.
-This is defined as
+The term filtering refers to the action of *filtering-out* the noise $e_t$ to estimate the signal $f_t$.
+Filtering is defined as
 {{< math >}}
 $$
 \tag{F.1}
@@ -288,11 +302,11 @@ $$
 \end{array}
 $$
 {{< /math >}}
-As shown in the table above, a two-step-ahead prediction at time $t$ considers all measurements at time $t$ to
+As shown in the table above, a two-step-ahead prediction at time $t$ considers all measurements up to time $t$ to
 make an estimate of the signal at time $t+2$.
 
 ## Smoothing
-This quantity refers to the estimate of $f_t$, with $t < T$, having observed $y_{1:T}$.
+This quantity refers to the estimate of $f_t$ having observed a full run of the experiment $y_{1:T}$.
 Contrary to the filtering equation $(\text{F.1})$, which is *online*, the smoothing operation
 waits until all measurements have been observed to make an estimate of the signal.
 We define the smoothing operation as
@@ -326,7 +340,7 @@ which we will see in a later post.
 ## Fixed-lag smoothing
 This quantity is a middle ground between the filtering, which is *online*, and smoothing, which is *offline*.
 The idea behind an $i$-step fixed-lag smoother is to estimate the signal $f_t$ after observing $y_{1:t+i}$.
-In this sense, we only have to wait $i$ steps before making an estimate of the signal $f_t$.
+That is, we must wait $i$ steps, before making an estimate of the signal $f_t$.
 {{< math >}}
 $$
 \tag{F.4}
