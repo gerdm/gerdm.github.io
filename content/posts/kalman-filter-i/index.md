@@ -375,6 +375,21 @@ BLUP estimates
 $(\text{F.1 -- F.4})$
 are obtained given a previously unseen run of innovations $\varepsilon_{1:T}$ derived from measurements $y_{1:T}$.
 
+## Noisy Lotka-Volterra model
+![sample-process](./samples-process.png)
+
+## Test phase
+![sample-run](./sample-run.png)
+
+### Filter
+![test-filter](./test-sample-filter.png)
+
+### Smoothing
+![test-smooth](./test-sample-smooth.png)
+
+### Fixed-lag
+![test-varying-err](errs-sample-lag.png)
+
 
 ---
 
