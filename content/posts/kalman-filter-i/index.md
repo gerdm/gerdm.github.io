@@ -373,10 +373,33 @@ We assume we have access to a *train phase* where the quantities
 and a test-phase where
 BLUP estimates
 $(\text{F.1 -- F.4})$
-are obtained given a previously unseen run of innovations $\varepsilon_{1:T}$ derived from measurements $y_{1:T}$.
+are obtained given a previously unseen run of innovations $\varepsilon_{1:T}$ derived from measurements $y_{1:T}$
+not seen in the train phase.
 
 ## Noisy Lotka-Volterra model
+We assume that the signal-plus-noise model takes the form
+{{< math >}}
+$$
+\begin{aligned}
+    \frac{f_{t + \Delta, 1} - f_{t, 1}}{\Delta} &= \alpha\,f_{t,1} - \beta\,f_{t,1}\,f_{t,2} + \phi_{t,1},\\
+    \frac{f_{t + \Delta, 2} - f_{t, 2}}{\Delta} &= \delta\,f_{t,1}\,f_{t,2} - \gamma\,f_{t,2} + \phi_{t, 2},\\
+    y_{t  + \Delta, 1} &= f_{t + \Delta, 1} + \varphi_{t,1},\\
+    y_{t  + \Delta, 2} &= f_{t + \Delta, 2} + \varphi_{t,2},
+\end{aligned}
+$$
+with
+$\phi_{t,i} \sim {\cal N}(0, \sigma_f^2 / \Delta)$,
+$\varphi_{t,j} \sim {\cal N}(0, \sigma_y^2)$,
+$(i,j) \in \{0,1\}^2$, and
+$\sigma_f^2, \sigma_y^2 > 0$,
+The following plot shows a sample of this process.
+The black line shows the signal and the coloured line shows the measurement.
+
+{{< /math >}}
 ![sample-process](./samples-process.png)
+
+## Train phase
+![kalman-gain](./gain-matrix-sample.png)
 
 ## Test phase
 ![sample-run](./sample-run.png)
@@ -387,7 +410,11 @@ are obtained given a previously unseen run of innovations $\varepsilon_{1:T}$ de
 ### Smoothing
 ![test-smooth](./test-sample-smooth.png)
 
-### Fixed-lag
+### Prediction
+![test-smooth](./test-sample-prediction.png)
+
+
+### Varying lag
 ![test-varying-err](errs-sample-lag.png)
 
 
