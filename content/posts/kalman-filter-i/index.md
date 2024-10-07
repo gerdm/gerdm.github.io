@@ -9,6 +9,17 @@ tldr: "An introduction to signal-plus-noise models and their best linear unbiase
 ---
 
 # Introduction
+I was first introduced to the Kalman filter as a computationally-efficient way to
+compute the posterior distribution over the latent (state) space given a sequence of measurables.
+This is the perspective I have been studying for five years.
+
+A few months ago, however, I came across the "Kalman filter primer" book by Randall Eubank.
+It is a small, densely-packed book on the derivation of the Kalman filter using mostly linear algebra
+and basic concepts of statistics.
+It currently rates 2/5 stars in Amazon.
+
+It accurately reflects the many assumptions one has to assume in order to derive the KF.
+
 
 Throughout this post, we denote random variables in capital letters $X$ and
 an in lower-case $x$ a sample of the random variable.
@@ -191,6 +202,13 @@ $$
 $$
 {{< /math >}}
 
+Finally, it can also be shown that {{< math >}}
+$$
+\tag{I.3}
+    {\rm Var}(Y_{1:T}) = {\bf L}\,{\bf S}\,{\bf L}^\intercal.
+$$
+{{< /math >}}
+
 ## Building an innovation sample
 
 The terms $(\text{I.1})$ and $(\text{I.2})$ provide two ways to estimate a sample of innovations $\varepsilon_{1:j}$
@@ -364,22 +382,30 @@ $$
 {{< /math >}}
 We observe that we require information up to time $t+2$ to make a prediction of the signal at time $t$.
 
+---
+
 # Example: a data-driven BLUP
-In this example, we provide a data-driven approach to estimate the BLUP at multiple timesteps.
-We assume we have access to a *train phase* where the quantities
+In this example, we consider a data-driven approach to estimate the BLUP at multiple timesteps.
+We divide this experiment into a *train phase* where the quantities
 {{< math >}}${\rm Cov}(F_t, {\cal E}_k)${{< /math >}},
-{{< math >}}${\rm Cov}(Y_t, {\cal E}_k)${{< /math >}}, and
-{{< math >}}${\rm Var}({\cal E}_k) = S_k${{< /math >}} are found;
-and a test-phase where
-BLUP estimates
-$(\text{F.1 -- F.4})$
-are obtained given a previously unseen run of innovations $\varepsilon_{1:T}$ derived from measurements $y_{1:T}$
-not seen in the train phase.
+{{< math >}}${\rm Cov}(Y_t, {\cal E}_k)${{< /math >}},
+{{< math >}}$S_k${{< /math >}}, and
+${\bf L}$
+are found;
+and a *test phase* where the BLUP estimates $(\text{F.1 -- F.4})$
+are are obtained from measurement $y_{1:T}$ not seen in the train phase.
+
+For this experiment, we make use of the `numpy` library, which includes the einsum operator,
+and the `einops` library.
+For a review of `np.einsum` see the post
+[einsums in the wild]({{< relref "posts/einsums-in-the-wild" >}}).
+
 
 ## Noisy Lotka-Volterra model
-We assume that the signal-plus-noise model takes the form
+Consider the following signal-plus-noise model
 {{< math >}}
 $$
+\tag{LV.1}
 \begin{aligned}
     \frac{f_{t + \Delta, 1} - f_{t, 1}}{\Delta} &= \alpha\,f_{t,1} - \beta\,f_{t,1}\,f_{t,2} + \phi_{t,1},\\
     \frac{f_{t + \Delta, 2} - f_{t, 2}}{\Delta} &= \delta\,f_{t,1}\,f_{t,2} - \gamma\,f_{t,2} + \phi_{t, 2},\\
@@ -387,30 +413,114 @@ $$
     y_{t  + \Delta, 2} &= f_{t + \Delta, 2} + \varphi_{t,2},
 \end{aligned}
 $$
+{{< /math >}}
+
 with
 $\phi_{t,i} \sim {\cal N}(0, \sigma_f^2 / \Delta)$,
 $\varphi_{t,j} \sim {\cal N}(0, \sigma_y^2)$,
-$(i,j) \in \{0,1\}^2$, and
+$(i,j) \in \{0,1\}^2$,
 $\sigma_f^2, \sigma_y^2 > 0$,
-The following plot shows a sample of this process.
-The black line shows the signal and the coloured line shows the measurement.
+$\Delta \in (0, 1)$, and
+$\alpha, \beta, \gamma, \delta$ values in the interval $(0,1)$.
 
-{{< /math >}}
+## The setup
+Consider samples of the sytem $(\text{LV.1})$ above with the following parameters:
+$\alpha = 2/3$,
+$\beta = 4/3$,
+$\gamma = 0.8$,
+$\delta = 1.0$,
+$\Delta = 0.01$,
+$\sigma_f^2 = 0.02^2$, and
+$\sigma_y^2 = 0.1^2$.
+We integrate the system for $T=1500$ steps, each starting at $(f_{0,1}, f_{0,2}) = (1.0, 1.0) + (u_1, u_2)$,
+with $u_i \sim \cal{U}[-0.2, 0.2]$.
+
+The following plot shows multiple samples of of this process.
+The black line shows the signal $(f_{t,1}, f_{t,2})$ and the coloured line shows the measurements $(y_{t,1}, y_{t,2})$
+for $t=1, \ldots, T.$
+
 ![sample-process](./samples-process.png)
 
 ## Train phase
+In the train phase, we consider 2000 samples of $(\text{LV.1})$ following the configuration outlined above.
+To enforce the constraint, $\mathbb{E}[f_t] = 0$, we *de-mean* the samples.
+For this section, we assume we have a numpy array of measurements `y_sims` and a numpy array of signals `f_sims`
+with `f_sims.shape == y_sims.shape == (1500, 2, 2000)`
+corresponding to the 1500 steps of the process, two dimensions, and 2000 samples.
+
+### Computation of innovations
+We begin by estimating the matrix ${\bf L}$. Recall from $(\text{I.3})$ that
+{{< math >}}${\rm Var}(Y_{1:T}) = {\bf L}\,{\bf S}\,{\bf L}^\intercal${{< /math >}}.
+This can be estimated in einsum form as
+```
+V = np.einsum("tds,kds->dtk", y_sims, y_sims) / (n_sims - 1)
+```
+Next, the terms ${\bf L}$ and ${\bf S}$ are estimated by
+```
+L = np.linalg.cholesky(V)
+S = np.einsum("dtt->dt", L)
+L = np.einsum("dtk,dk->dtk", L, 1 / S)
+S = S ** 2
+```
+
+Finally, the innovations derived from the samples `y_sims` are estimated by
+```
+ve_sims = np.linalg.solve(L, einops.rearrange(y_sims, "t d s -> d t s"))
+ve_sims = einops.rearrange(ve_sims, "d t s -> t d s")
+```
+This corresponds to $(\text{I.2})$.
+
+### Computation of the gain matrices
+For the gain matrices, we obtain
+{{< math >}}
+$$
+\begin{aligned}
+    {\bf K}_{t,k}
+    &= {\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}\\
+    &= {\rm Cov}(F_t, {\cal E}_k)\,{\rm Var}({\cal E}_k)^{-1}\\
+    &\approx\left(\frac{1}{S}\sum_{s=1}^S\left(f_t^{(s)} - \bar{f}_t\right)\,\left(\varepsilon_k^{(s)} - \bar{\varepsilon}_k\right)^\intercal\right)\,S_k^{-1}
+\end{aligned}
+$$
+{{< /math >}}
+
+This quantity is estimated by
+```
+K = np.einsum("tds,kds,dk->tkd", f_sims, ve_sims, 1 / S) / (n_sims - 1)
+```
+The following Figure shows the gain matrices ${\bf K}_{t,k,i}$ for $i=1,2$, corresponding to the $x$ and $y$ coordinates
+of the process.
 ![kalman-gain](./gain-matrix-sample.png)
 
+We observe that in each panel, the values below the diagonal have non-zero values for $K_{t,k,i}$,
+whereas values above the diagonal are mostly zero.
+This suggests that, for any two points in time $t$ and $k$, with $t$ being the *target* index and $k$ the
+frame of reference, having $k < t$ provides information to the estimate of $t$.
+Conversely, the information from $k > t$ is almost none.
+
 ## Test phase
+Having computed `K` and `L`, we are now able to evaluate the BLUP estimates $(\text{F.1 -- F.4})$
+on an unseen run `ve_test_sim` with `ve_test_sim.shape == (1500, 2)`.
 ![sample-run](./sample-run.png)
 
 ### Filter
+
+```
+tmask = np.tril(np.ones((T, T)), k=0)
+latent_filter = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
+```
 ![test-filter](./test-sample-filter.png)
 
 ### Smoothing
+```
+latent_smooth = np.einsum("tkd,kd->td", K, ve_test_sim)
+```
 ![test-smooth](./test-sample-smooth.png)
 
 ### Prediction
+```
+tmask = np.tril(np.ones((n_steps, n_steps)), k=-5)
+latent_pred = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
+```
 ![test-smooth](./test-sample-prediction.png)
 
 
