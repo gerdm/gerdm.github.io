@@ -11,15 +11,29 @@ tldr: "An introduction to signal-plus-noise models and their best linear unbiase
 # Introduction
 I was first introduced to the Kalman filter as a computationally-efficient way to
 compute the posterior distribution over the latent (state) space given a sequence of measurables.
-This is the perspective I have been studying for five years.
+This is the perspective that I have been studying for a few years now.
 
-A few months ago, however, I came across the "Kalman filter primer" book by Randall Eubank.
-It is a small, densely-packed book on the derivation of the Kalman filter using mostly linear algebra
-and basic concepts of statistics.
-It currently rates 2/5 stars in Amazon.
+A few months ago, however, I came across the "Kalman filter primer" book by Randall L. Eubank ---
+a small, densely-packed, and zero-motivation book on the Kalman filter (KF) and
+its derivation using only tools from linear algebra and basic concepts of statistics.
+Despite the not-so-well received perseption by some audience (it currently rates 2/5 stars in Amazon),
+it contains some important lessons about how the KF is derived.
+In particular, it was surprising to me to learn just how much we have to assume in order to derive the KF.
+Moreover, that despite all these assumptions (many of which do not necessarily hold in practice),
+the KF *just works*.
 
-It accurately reflects the many assumptions one has to assume in order to derive the KF.
+In these series of post, I summarise the most important lessons that I drew from the book.
+Each post contains a section on the theory, some motivation on the decision that we make,
+and a final example, where we put theory into practice.
 
+## The first part
+In this first post, I present signal-plus-noise models.
+With few assumptions on the data generating process (DGP),
+the best-linear-unbiased estimate for signals-plus-noise models is derived.
+We then modify the result to make use of *innovations* to make the computation of the BLUP more efficient.
+We then present filtering, smoothing, prediction, and fixed-lag-smoothing as computing the BLUP
+on different timeframes.
+This post concludes by introducing a data-driven-approach to perform filtering using a pure data-driven approach.
 
 Throughout this post, we denote random variables in capital letters $X$ and
 an in lower-case $x$ a sample of the random variable.
@@ -35,9 +49,9 @@ a predictable process
 and an unpredictable process
 {{< math >}}${E}_{1:T}${{< /math >}}.
 We assume $(Y_t, F_t, E_t) \in {\mathbb R}^d$ for all
-{{< math >}}$t \in {\cal T} = \{1, \ldots, T\}${{< /math >}}
-and $d \geq 1$.
-By _predictable_, we mean that the that the covariance between the measurement and the signal is (not necessarily) non-diagonal.
+{{< math >}}$t \in {\cal T} = \{1, \ldots, T\}${{< /math >}},
+$d \geq 1$, and $T \gg d$.
+By _predictable_, we mean that the that the covariance between the measurement and the signal is not (necessarily) non-diagonal.
 By _unpredictable_, we mean that the covariance between the measurement and the noise is diagonal.
 This means
 
@@ -65,21 +79,20 @@ Finally, suppose
 {{< math >}}$\mathbb{E}[F_t] = 0${{< /math >}} and
 {{< math >}}$\mathbb{E}[{E}_t] = 0${{< /math >}}
 for all $t \in {\cal T}$.
-<!-- This assumption can be relaxes, but we keep this for sake of simplicity -->
+This assumption can be relaxed, but we keep this for sake of simplicity
 
+<!-- We assume that running an experiment produces $y_{1:T}$, $f_{1:T}$, and $e_{1:T}$. -->
+<!-- However, we only have access to the *measurements* $y_{1:T}$. -->
 
 # The best-linear unbiased predictor (BLUP)
 Denote by $y_{1:T}$ a sample of the measurement process $Y_{1:T}$.
 Similarly, denote by $f_{1:T}$ and $e_{1:T}$ the samples of
 the signal and the noise processes $F_{1:T}$ and $E_{1:T}$ respectively.
-We assume that running an experiment produces $y_{1:T}$, $f_{1:T}$, and $e_{1:T}$.
-However, we only have access to the *measurements* $y_{1:T}$.
-
-
 Suppose, $(j,t)\in{\cal T}^2$
-and we are given a subset of the sampled measurements $y_{1:j} = (y_1, \ldots, y_j)$.
+and we are given a subset of the sampled measurements $y_{1:j} = (y_1, \ldots, y_j)$,
+but we do not observe $f_{1:T}$ nor $e_{1:T}$.
 We seek to find the matrix ${\bf A} \in \reals^{d\times j}$ that maps $y_{1:j}$
-to the (unobserved) signal $f_t$. We write this estimate by
+to the (unobserved) signal $f_t$. We write this *linear predictor* as
 {{< math >}}
 $$
     f_{t|j} =  {\bf A}\,y_{1:j}.
@@ -90,9 +103,10 @@ to make a prediction about the signal at time $t$.
 Depending on the value of $j$ (a frame of reference) this estimate takes different names.
 We come back to this point below.
 
-Our choice of ${\bf A}\in{\mathbb R}^{d\times j}$ is determined as the
+For mathematical convenience,
+our choice of ${\bf A}\in{\mathbb R}^{d\times j}$ is determined as the
 matrix that minimises the expected L2 error
-between the signal process $F_t$ and the *prediction process*
+between the signal process $F_t$ and the *linear prediction process*
 {{< math >}}${\bf A}\,Y_{1:j}${{< /math >}}.
 Having found this matrix ${\bf A}$, the prediction ${\bf A}y_{1:t}$ is called
 best linear unbiased predictor (BLUP).
@@ -112,26 +126,29 @@ $$
 $$
 {{< /math >}}
 Then, the best linear unbiased predictor (BLUP) of the signal at time $t$,
-having access to a sample $y_{1:j}$, is defined by
+given $Y_{1:j}$, is defined by
 {{< math >}}
 $$
 \begin{aligned}
 \tag{BLUP.1}
-    f_{t|j}
+    F_{t|j}
     &= {\bf A}_\text{opt}\,y_{1:j} \\
     &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}\,y_{1:j}.
 \end{aligned}
 $$
 {{< /math >}}
 
-Furthermore,
+Then,
 the error variance-covariance matrix of the BLUP is defined by
 {{< math >}}
 $$
 \tag{EVC.1}
-    \Sigma_{t|j} = {\rm Var}(F_t - f_{t|j}) = {\rm Var}(F_t) - {\bf A}_\text{opt}\,{\rm Var}(F_{1:j})\,{\bf A}_\text{opt}^\intercal.
+    \Sigma_{t|j} = {\rm Var}(F_t - F_{t|j}) =
+    {\rm Var}(F_t) - {\bf A}_\text{opt}\,{\rm Var}(Y_{1:j})\,{\bf A}_\text{opt}^\intercal.
 $$
 {{< /math >}}
+
+See [proof 1]({{<ref "#proof-of-proposition-1" >}}) in the Appendix for a proof.
 
 
 # The innovation process
@@ -202,12 +219,14 @@ $$
 $$
 {{< /math >}}
 
-Finally, it can also be shown that {{< math >}}
+Finally, it can also be shown that the variance of the measurement process satisfies
+{{< math >}}
 $$
 \tag{I.3}
     {\rm Var}(Y_{1:T}) = {\bf L}\,{\bf S}\,{\bf L}^\intercal.
 $$
 {{< /math >}}
+The result above corresponds to the Cholesky decomposition.
 
 ## Building an innovation sample
 
@@ -533,6 +552,7 @@ latent_pred = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
 # Appendix
 
 ### Proof of proposition 1
+Here, we provide a detailed proof of [proposition 1]({{<ref "#proposition-1">}}).
 Let
 {{< math >}}
 $$
@@ -552,6 +572,28 @@ $$
 $$
 {{< /math >}}
 Setting this last equality to zero recovers ${\bf A}_\text{opt}$ above.
+
+Next, consider the error variance-covariance matrix
+{{< math >}}
+$$
+\begin{aligned}
+    \Sigma_{t|j}
+    &= {\rm Var}(F_t - F_{t|j})\\
+    &= \mathbb{E}\left[(F_t - F_{t|j})(F_t - F_{t|j})^\intercal\right]\\
+    &= \mathbb{E}\left[F_tF_t^\intercal - F_tF_{t|j}^\intercal - F_{t|j}F_t^\intercal + F_{t|j}F_{t|j}^\intercal\right]\\
+    &= \mathbb{E}\left[F_tF_t^\intercal - F_t({\bf A}_\text{opt}Y_{1:j})^\intercal -
+    {\bf A}_\text{opt}Y_{1:j}F_t^\intercal + {\bf A}_\text{opt}Y_{1:j}Y_{1:j}^\intercal{\bf A}_\text{opt}\right]\\
+    &= {\rm Var}(F_t) - {\rm Cov}(F_t, Y_{1:j}){\bf A}_\text{opt}^\intercal - {\bf A}_\text{opt}{\rm Cov}(Y_{1:j}, F_t)
+    + {\bf A}_\text{opt}{\rm Var}(Y_{1:j}){\bf A}_\text{opt}^\intercal\\
+    &= {\rm Var}(F_t)
+    - {\rm Cov}(F_t, Y_{1:j}){\rm Var}(Y_{1:j})^{-1}{\rm Var}(Y_{1:j}){\bf A}_\text{opt}^\intercal\\
+    &\quad- {\bf A}_\text{opt}{\rm Var}(Y_{1:j})\left[{\rm Cov}(F_t, Y_{1:j}){\rm Var}(Y_{1:j})^{-1}\right]^\intercal\\
+    &\quad + {\bf A}_\text{opt}{\rm Var}(Y_{1:j}){\bf A}_\text{opt}^\intercal\\
+    &= {\rm Var}(F_t) - {\bf A}_\text{opt}{\rm Var}(Y_{1:j}){\bf A}_\text{opt}^\intercal.
+\end{aligned}
+$$
+{{< /math >}}
+Where the last line follows from the definition of ${\bf A}_\text{opt}$.
 {{< math >}} $$ \ \tag*{$\blacksquare$} $$ {{< /math >}}
 
 ### Proof of proposition 2
