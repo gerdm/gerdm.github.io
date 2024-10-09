@@ -401,12 +401,12 @@ how to detect changepoint detection with the Bernoulli-Beta model.
 
 ## A probabilistic model for the lookback window
 
-Consider the non-stationary coin-tossing problem.
-Suppose we are at time $t$, with access to the observations $y_{1:t}$,
+Recall the non-stationary coin-tossing problem.
+Suppose we are at time $t$, we have access to the observations $y_{1:t}$,
 and we are told that a *changepoint* occurred $\ell_t \geq 1$ steps ago.
 In other words, the probability of heads for the observations $y_{\ell_t+1:t}$
 is different than that for the earlier observations $y_{1:\ell_t}$.
-Furthermore, the unknown probability of heads remains constant for all coin tosses in the interval
+Furthermore, suppose that the unknown probability of heads remains constant for all coin tosses in the interval
 {{< math >}}$\{\ell_t + 1, \ldots, t\}${{< /math >}}.
 
 With this assumption, we define prior probability of heads,
@@ -424,7 +424,7 @@ The lookback window $\ell_t$ thus represents how much past data we consider rele
 
 Armed with our conditional prior definition,
 we now determine the probability of each possible value of the lookback.
-Observe that, at time $t$,
+Observe that, at time $t$, the runlengtht takes possible values
 {{< math >}}$\ell_t \in \{0, 1, \ldots, t\}${{< /math >}}.
 Following a Bayesian formulation, we seek to determine the *posterior mass*
 of the lookback conditioned on the history up to time $t$.
@@ -439,8 +439,11 @@ $$
 {{< /math >}}
 for $\ell_t = 0, \ldots, t$.
 
-Because the space is discrete, we only need to evaluate the joint probability $p(\ell_t, y_{1:t})$
-for all values of $\ell_t \in \{0, \ldots, t\}$
+Because the space is discrete,
+to specify the posterior mass function, we only
+need to evaluate the joint probability $p(\ell_t, y_{1:t})$
+for all values
+{{< math >}}$\ell_t \in \{0, \ldots, t\}${{< /math >}}
 and then normalise over all of the computed values to obtain the posterior probability mass.
 
 ### Estimating the joint density
@@ -462,7 +465,7 @@ $$
 Under certain conditions, this will yield a recursive formula.
 We formalise this in the following proposition.
 
-**\*Proposition 1\***  
+#### Proposition 1
 Suppose that
 {{< math >}}
 $$
@@ -514,24 +517,25 @@ $$
 $$
 {{< /math >}}
 
-Proposition 1 shows that, at time $t$, the log-joint $p(r_t, y_{1:t})$ for $r_t > 0$
+Proposition 1 shows that at time $t$, the log-joint $p(r_t, y_{1:t})$ for $r_t > 0$
 is given by the product of
-the log-joint at time $t-1$, for $r_{t-1} = r_{t} - 1$, i.e., $p(r_t - 1, y_{1:t-1})$;
+the log-joint at time $t-1$, for $r_{t-1} = r_{t} - 1$;
 the probability of a increase in the runlength (or no changepoint), i.e., $1 - \pi$; and
-the posterior predictive distribution $p(y_t \vert r_t, y_{1:t-1})$.
+the posterior predictive density $p(y_t \vert r_t, y_{1:t-1})$.
 
 ### BOCD predictions
-To recap, the BOCD algorithm estimates the probability of the runlength (lookback window)
-{{< math >}}$\ell_t \in \{0, \ldots, t\}${{< /math >}} given the stream of datapoints $y_{1:t}$.
-We specify this via $p(\ell_t \vert y_{1:t})$. As it turns out, the *posterior density* can be written as
+To recap, the BOCD algorithm estimates the joint density between the runlength (lookback window)
+and the data  $p(\ell_t, y_{1:t})$ recursively as a function of $p(\ell_{t-1}, y_{1:t-1})$.
+The joint density can then be used to compute the posterior over the runlength via
 {{< math >}}
 $$
     p(\ell_t \vert y_{1:t}) = \frac{p(\ell_t, y_{1:t})}{p(y_{1:t})} = \frac{p(\ell_t, y_{1:t})}{\sum_{\ell_t'=0}^t p(\ell_t', y_{1:t})}.
 $$
 {{< /math >}}
-and the joint density $p(\ell_t, y_{1:t})$ can be computed recursively as a function of $p(\ell_{t-1}, y_{1:t-1})$.
 
-Then, a prediction for the heads is
+Having estimated the set of values
+{{< math >}}$\{p(\ell_t \vert y_{1:t})\}_{\ell_t=0}^t${{< /math >}},
+a prediction for the value of heads is given by
 {{< math >}}
 $$
 \begin{aligned}
@@ -547,12 +551,46 @@ $$
 {{< /math >}}
 
 ## Implementation of the BOCD
-Despite the simplicity of the BOCD algorithm, one of the main struggles I faced when reading the original paper is its implementation.
+### The log-joint
+In practice, computing the equations above can lead to numerical underflow.
+To go around this, it is computationally convenient to compute the log-joint-density $\log p(r_t, y_{1:t})$.
+This takes the form
+{{< math >}}
+$$
+    \log p(\ell_t, y_{1:t}) =
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) + 
+    \log(1-\pi)+
+    \log p(\ell_{t-1}, y_{1:t-1})
+$$
+{{< /math >}}
+for $ \ell_{t} = \ell_{t-1} + 1$,
+and
+{{< math >}}
+$$
+\begin{aligned}
+    &\log p(\ell_t, y_{1:t})
+    \\&=
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
+    \log\pi + 
+    \log\left(\sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})\right)\\
+    &=
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
+    \log\pi + 
+    \log\left(\sum_{\ell_{t-1}=0}^{t-1}\exp(\log(p(\ell_{t-1}, y_{1:t-1})))\right)\\
+    &=
+    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
+    \log\pi + 
+    {\rm logsumexp}\left(\{\log p(\ell_{t-1}, r_{1:t-1})\}_{\ell_{t-1}=0}^{t-1}\right)\\
+\end{aligned}
+$$
+{{< /math >}}
+for $\ell_{t} = 0$.
 
+### The recursive updates
 In this section, we provide a detailed description on the implementation of BOCD for the BB-model.
 First, we note that the computational complexity of the algorithm is *linear in time*.
 This means that the amount of computations we have to perform increases by one at each new timestep.
-To see this, consider the array below, which specifies the available data collections to compute $p(\ell_t, y_{1:t})$
+To see this, consider the array below, which specifies the required collections to compute $p(\ell_t \vert y_{1:t})$
 {{< math >}}
 $$
 \begin{array}{c|ccccc}
@@ -581,18 +619,23 @@ $$
 $$
 \begin{array}{c|ccccc}
 t & & & & & & \\
-0 & \emptyset & & & & & & \\
-1 & \emptyset & y_1 & & & & & \\
-2 & \emptyset & y_2 & y_{1:2} & & & & \\
-3 & \emptyset & y_3 & y_{2:3} & y_{1:3} & & & \\
-4 & \emptyset & y_4 & \color{teal}{y_{3:4}} & y_{2:4} & y_{1:4} & & \\
-5 & \emptyset & y_5 & y_{4:5} & \color{orange}{y_{3:5}} & y_{2:5} & y_{1:5} & \\
-6 & \emptyset & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
+0 & p(0, y_{1:0}) & & & & & & \\
+1 & p(0, y_{1:1}) & p(1, y_{1:1}) & & & & & \\
+2 & p(0, y_{1:2}) & p(1, y_{1:2}) & p(2, y_{1:2}) & & & & \\
+3 & p(0, y_{1:3}) & p(1, y_{1:3}) & p(2, y_{1:3}) & p(3, y_{1:3}) & & & \\
+4 & p(0, y_{1:4}) & p(1, y_{1:4}) & \color{teal}{p(2, y_{1:4})} & p(3, y_{1:4}) & p(4, y_{1:4}) & & \\
+5 & p(0, y_{1:5}) & p(1, y_{1:5}) & p(2, y_{1:5}) & \color{orange}{p(3, y_{1:5})} & p(4, y_{1:5}) & p(5, y_{1:5}) & \\
+6 & p(0, y_{1:6}) & p(1, y_{1:6}) & p(2, y_{1:6}) & p(3, y_{1:6}) & p(4, y_{1:6}) & p(5, y_{1:6}) & p(6, y_{1:6}) \\
 \hline
 \ell_t & 0 & 1 & 2 & 3 & 4 & 5 & 6
 \end{array}
 $$
 {{< /math >}}
+
+This means that the log-joint for $\ell_t > 0$ can be updated as
+```
+log_joint = log_predict + log_joint_prev[k-1] + log(1 - pi)
+```
 
 Conversely, if $\ell_t = 0$, the BOCD algorithm updates the joint $p(0, y_{1:t})$ from all values at $t-1$, i.e.,
 {{< math >}}
@@ -605,81 +648,143 @@ $$
 \end{aligned}
 $$
 {{< /math >}}
-
 {{< math >}}
 $$
 \begin{array}{c|ccccc}
 t & & & & & & \\
-0 & \emptyset & & & & & & \\
-1 & \emptyset & y_1 & & & & & \\
-2 & \emptyset & y_2 & y_{1:2} & & & & \\
-3 & \emptyset & y_3 & y_{2:3} & y_{1:3} & & & \\
-4 & \color{teal}\emptyset & \color{teal}{y_4} & \color{teal}{y_{3:4}} & \color{teal}{y_{2:4}} & \color{teal}{y_{1:4}} & & \\
-5 & \color{orange}{\emptyset} & y_5 & y_{4:5} & y_{3:5} & y_{2:5} & y_{1:5} & \\
-6 & \emptyset & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
+0 & p(0, y_{1:0}) & & & & & & \\
+1 & p(0, y_{1:1}) & p(1, y_{1:1}) & & & & & \\
+2 & p(0, y_{1:2}) & p(1, y_{1:2}) & p(2, y_{1:2}) & & & & \\
+3 & p(0, y_{1:3}) & p(1, y_{1:3}) & p(2, y_{1:3}) & p(3, y_{1:3}) & & & \\
+4 & \color{teal}{p(0, y_{1:4})} & \color{teal}{p(1, y_{1:4})} & \color{teal}{p(2, y_{1:4})} & \color{teal}{p(3, y_{1:4})} & \color{teal}{p(4, y_{1:4})} & & \\
+5 & \color{orange}{p(0, y_{1:5})} & p(1, y_{1:5}) & p(2, y_{1:5}) & p(3, y_{1:5}) & p(4, y_{1:5}) & p(5, y_{1:5}) & \\
+6 & p(0, y_{1:6}) & p(1, y_{1:6}) & p(2, y_{1:6}) & p(3, y_{1:6}) & p(4, y_{1:6}) & p(5, y_{1:6}) & p(6, y_{1:6}) \\
 \hline
 \ell_t & 0 & 1 & 2 & 3 & 4 & 5 & 6
 \end{array}
 $$
 {{< /math >}}
+```
+log_joint + logsumexp(log_joint_prev[:] + log(pi))
+```
 
- which means that, for instance,
-the information accrues as follows
+### Pseudocode
+The BOCD step at time $t$ can be defined by
+```python
+def bocd_step(y, k, a_prev, b_prev, log_joint_prev, pi):
+    a, b = a_prev[k], b_prev[k]
+    log_predict = log(y * a + (1 - y) * b) - log(a + b) # following (...)
+    if k > 0:
+        log_joint = log_joint + log_joint_prev[k-1] + log(1 - pi) # following (...)
+    else:
+        log_joint = log_joint + logsumexp(log_joint_prev + log(pi)) # following (...)
+
+    # following (...)
+    a_update = a + y
+    b_update = b + (1 - y)
+
+    return a_update, b_update, log_joint
+```
+
+An update for all possible values of $\ell_t$ is given by
+```python
+def init_bocd_step(t):
+    a_values = zeros(t)
+    b_values = zeros(t)
+    log_joint = zeros(t)
+    return a_values, b_values, log_joint
 
 
+def bocd_update(t, yt, a_prev, b_prev, log_joint_prev, pi):
+    a_new, b_new, log_joint_new = init_bocd_step(t)
+    for k in range(t + 1):
+        a, b, log_joint = bocd_step(yt, k, a_prev, b_prev, log_joint_prev, pi)
 
-In practice, computing the equations above can lead to numerical underflow.
-To go around this, it is computationally convenient to compute the log-joint-density $\log p(r_t, y_{1:t})$.
-This takes the form
-{{< math >}}
-$$
-    \log p(\ell_t, y_{1:t}) =
-    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) + 
-    \log(1-\pi)+
-    \log p(\ell_{t-1}, y_{1:t-1})
-$$
-{{< /math >}}
-for $ \ell_{t} = \ell_{t-1} + 1$,
-and
-{{< math >}}
-$$
-\begin{aligned}
-    \log p(\ell_t, y_{1:t})
-    &=
-    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
-    \log\pi + 
-    \log\left(\sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})\right)\\
-    &=
-    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
-    \log\pi + 
-    \log\left(\sum_{\ell_{t-1}=0}^{t-1}\exp(\log(p(\ell_{t-1}, y_{1:t-1})))\right)\\
-    &=
-    \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) +
-    \log\pi + 
-    {\rm logsumexp}\left(\{\log p(\ell_{t-1}, r_{1:t-1})\}_{\ell_{t-1}=0}^{t-1}\right)\\
-\end{aligned}
-$$
-{{< /math >}}
-for $\ell_{t} = 0$.
+        log_joint_new[k] = log_joint
+        a_new[k] = a
+        b_new[k] = b
+    
+    return a_new, b_new, log_joint_new
+```
+
+Then, a prediction for the probability of heads $\mu$ is given by
+
+```python
+def predict_proba(a_values, b_values, log_joint):
+    mean_est = a_values / (a_values + b_values)
+    log_posterior = log_joint - logsumexp(log_posterior)
+    mean_est = mean_est * exp(log_posterior)
+    mean_est = sum(mean_est)
+    return mean_est
+```
+
+Finally, a full run of the algorithm is given by
+```python
+def bocd(y_values, pi):
+    mean_estimates = zeros(len(y_values))
+    a_values, b_values, log_joint = init_bocd_step(0)
+    for t, y in enumerate(y_values):
+        a_values, b_values, log_joint = bocd_update(
+            t, y, a_values, b_values, log_joint, pi
+        )
+        mean_est = predict_proba(a_values, b_values, log_joint)
+        mean_estimates[t] = mean_es
+    return mean_estimates
+```
+
+For a full working example, see [this notebook](https://github.com/gerdm/bayes/blob/abe0e3f13d004a9d8bde179f8ac9375f3ba6050f/bocd.ipynb).
 
 # The BOCD in practice
-We go back to the non-stationary coin tosses dataset shown above
+In this section, we apply the BB-BOCD algorithm for the non-stationary coin tosses dataset shown above.
 
 ## Probability of the runlength
+First, we show the log posterior probability of a changepoint, i.e.,
+we show $p(\ell_t \vert y_{1:t})$ for all possible pairs $(\ell_t, y_{1:t})$.
+We plot in red the most likely runlenght, which corresponds to $\ell_t^* = \argmax_\ell p(\ell, y_{1:t})$
+for $t=1,\ldots, T$.
 ![bocd log-joint](./bocd-log-joint-full.png)
+We observe that the BOCD algorithm captures the changepoint.
+However, it takes a few extra timesteps to obtain high confidence of the changepoint.
 
 ## Online estimate of the probability of heads
+Next, we plot the mean posterior predictive.
 ![posterior with bocd changepoint](./posterior-proba-bocd-full.png)
-
-
-# Drawbacks of the BOCD algorithm
-In the form we have presented the BOCD algorithm,
-we assumed a fixed and known hazard rate $\pi$,
-we assumed a well-specified model. This can be detrimental in scenarios with outliers or misspecified models.
-Grows linear in time: at time $t$, we require $t$ copies of possible model parameters
+As we saw for the probability of runlength, the BOCD detects a changepoint around 20 steps
+after the actual changepoint occurred. This is translated into change in the posterior predictive
+mean after these 20 timesteps.
 
 # Overcoming the linear complexity
 In this section, we provide a simple way to overcome the linear complexity of the BOCD.
+This allows us to run the algorithm indefinitely without incurring an increase in computational cost.
+The resulting algorithm maintains a *buffer* of $K \geq 1$ possible runlengths.
+Suppose that, at time $t\geq K$, we have these $K$ values in the form
+{{< math >}}
+$$
+    p(\ell_{t,k}, y_{1:t}) \quad \text{for } k=1, \ldots, K.
+$$
+{{< /math >}}
+Then, at time $t+1$, we update each element in the *buffer* to obtain
+$$
+    p(\ell_{t+1,k}, y_{1:t+1}) \quad \text{for } k=0, \ldots, K.
+$$
+where $p(\ell_{t+1,0}, y_{1:t+1}) = p(0, y_{1:t+1})$.
+We then sort
+{{< math >}}$\{p(\ell_{t,0}, y_{1:t+1}), \ldots, p(\ell_{t,K}, y_{1:t+1})\}${{< /math >}}
+in descending order and remove the smallest element to obtain the new $K$ values.
+The algorithm then proceeds as normal.
+
+For $t < K$, we simply evaluate all possible values until the *buffer* is filled.
+
+# Drawbacks of the BOCD algorithm
+Despite the relative simplicity of the BOCD, it does come with a few drawbacks.
+First, in the form we have presented the BOCD algorithm,
+we assumed a fixed and known hazard rate $\pi$.
+Not knowing this value may incur in more or less detection of changepoints than there actually are.
+Second, we assumed a well-specified model. This can be detrimental in scenarios with outliers or misspecified models.
+Third, we only consider conjugate models.
+Fourth, we assume that regime changes occur abruptly, which does not allow for *smooth* transition between regime changes.
+Despite these drawbacks. The BOCD algorithm is a good first approximation to tackle the problem
+of non-stationarity from a Bayesian perspective.
 
 # Conclusion
 
@@ -688,6 +793,7 @@ In this section, we provide a simple way to overcome the linear complexity of th
 # Appendix
 
 ## Proof of Proposition 1
+Here, we show that
 {{< math >}}
 $$
     p(\ell_t, y_{1:t}) =
@@ -715,4 +821,4 @@ $$
 {{< /math >}}
 are the posterior parameters for the BB model at time $t$, under a runlength of size $\ell$.
 
-[^def-rlp]: There is a more rigorous argument based on XXXX, but we will follow this much more simplified approach.
+[^def-rlp]: There is a more rigorous definition based on the product-partition model, but we will follow this much more simplified approach.
