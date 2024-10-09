@@ -108,7 +108,8 @@ As we've seen, the optimal lookback $\ell$ shifts as time $t$ progresses.
 This raises a critical question: At any given time $t$, how do we determine the _best_ lookback period?
 Here, the _best_ lookback is the one that most accurately reflects the probability of heads in the current regime.
 
-This is where the Bayesian Online Changepoint Detection (BOCD) algorithm comes into play.
+This is where the [Bayesian Online Changepoint Detection (BOCD)](https://arxiv.org/abs/0710.3742)
+algorithm comes into play.
 As we will see,
 BOCD works by weighting different lookbacks according to their probability,
 allowing it to detect changes in real time and dynamically adjust predictions.
