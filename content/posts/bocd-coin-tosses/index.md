@@ -1,10 +1,10 @@
 ---
 title: "Non-stationary coin tosses - an introduction to the BOCD"
 date: 2024-08-10
-description: "The Bayesian Online Changepoint Detection (BOCD) algorithm in Binary data."
+description: "The Bayesian Online Changepoint Detection (BOCD) algorithm for binary data."
 katex: true
 draft: true
-tags: [bocd, simplified, bayesian]
+tags: [bocd, simplified, bayesian, changepoint, non-stationary]
 tldr:
     A detailed and simplified introduction to the Bayesian online changepoint detection (BOCD) model
     for binary data using a Beta-Bernoulli model.
@@ -678,13 +678,15 @@ The BOCD step at time $t$ can be defined by
 ```python
 def bocd_step(y, k, a_prev, b_prev, log_joint_prev, pi):
     a, b = a_prev[k], b_prev[k]
-    log_predict = log(y * a + (1 - y) * b) - log(a + b) # following (...)
+    log_predict = log(y * a + (1 - y) * b) - log(a + b)
     if k > 0:
-        log_joint = log_joint + log_joint_prev[k-1] + log(1 - pi) # following (...)
+        # no changepoint
+        log_joint = log_joint + log_joint_prev[k-1] + log(1 - pi)
     else:
-        log_joint = log_joint + logsumexp(log_joint_prev + log(pi)) # following (...)
+        # changepoint
+        log_joint = log_joint + logsumexp(log_joint_prev + log(pi))
 
-    # following (...)
+    # Beta-Bernoulli update
     a_update = a + y
     b_update = b + (1 - y)
 
@@ -797,6 +799,21 @@ Finally, we assumed that regime changes occur abruptly, without allowing for *sm
  
 The BOCD algorithm is a solid first approximation for tackling the problem of non-stationarity from a Bayesian perspective.
 
+
+# Discussion
+In this post, we explored the BOCD algorithm, a Bayesian method designed to detect and adapt to regime changes, provided these changes occur *abruptly* with a probability $\pi$. A more general formulation of the BOCD algorithm models regime changes using a probability function $H(r_t)$, wher
+ $H: \mathbb{N} \to (0,1)$ is the *hazard rate*,
+ which quantifies the likelihood of a regime change occurring at a given time.
+
+The key questions about the BB-BOCD are:
+1. When are changepoints detected?
+2. What is the probability of heads?
+
+Addressing the first question, it is important to note that the BOCD algorithm does not *detect* a changepoint in the traditional sense. Instead, it evaluates the probability that a changepoint occurred $r_t$ steps ago. Consequently, merely taking the ${\rm argmax}$ of the most likely run length may not capture the entire scenario. As illustrated in the heatmap for the probability of the run length, which shows the distribution of probabilities over different run lengths, relying solely on the argmax, while straightforward, can yield noisy results even in well-specified scenarios, which is the context we examined in this post.
+
+For the second question, the probability of heads can also be easily determined by taking the argmax over the most likely path and evaluating the probability of heads. However, a more principled approach would involve the weighted method detailed in the section [BOCD Predictions]({{<ref "#bocd-predictions">}}), as this method accounts for each value of $\mu$ according to its probability.
+
+Understanding these nuances in the BOCD algorithm not only enhances its practical application but also informs all the developments in Bayesian change point detection literature.
 
 ---
 
