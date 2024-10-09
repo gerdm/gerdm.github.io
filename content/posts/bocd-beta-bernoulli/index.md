@@ -6,8 +6,8 @@ katex: true
 draft: true
 tags: [bocd, simplified, bayesian]
 tldr:
-    A detailed and simplified introduction to Bayesian online changepoint detection (BOCD) for binary data
-    modelling using a Beta-Bernoulli model.
+    A detailed and simplified introduction to the Bayesian online changepoint detection (BOCD) model
+    for binary data using a Beta-Bernoulli model.
 ---
 
 
@@ -423,8 +423,8 @@ The lookback window $\ell_t$ thus represents how much past data we consider rele
 [^def-rlp]
 
 Armed with our conditional prior definition,
-we seek to determine the probability of each possible value of the lookback.
-We observe that, at time $t$,
+we now determine the probability of each possible value of the lookback.
+Observe that, at time $t$,
 {{< math >}}$\ell_t \in \{0, 1, \ldots, t\}${{< /math >}}.
 Following a Bayesian formulation, we seek to determine the *posterior mass*
 of the lookback conditioned on the history up to time $t$.
@@ -520,7 +520,7 @@ the log-joint at time $t-1$, for $r_{t-1} = r_{t} - 1$, i.e., $p(r_t - 1, y_{1:t
 the probability of a increase in the runlength (or no changepoint), i.e., $1 - \pi$; and
 the posterior predictive distribution $p(y_t \vert r_t, y_{1:t-1})$.
 
-### Making predictions
+### BOCD predictions
 To recap, the BOCD algorithm estimates the probability of the runlength (lookback window)
 {{< math >}}$\ell_t \in \{0, \ldots, t\}${{< /math >}} given the stream of datapoints $y_{1:t}$.
 We specify this via $p(\ell_t \vert y_{1:t})$. As it turns out, the *posterior density* can be written as
@@ -531,6 +531,21 @@ $$
 {{< /math >}}
 and the joint density $p(\ell_t, y_{1:t})$ can be computed recursively as a function of $p(\ell_{t-1}, y_{1:t-1})$.
 
+Then, a prediction for the heads is
+{{< math >}}
+$$
+\begin{aligned}
+    \mathbb{E}[\mu \vert y_{1:t}]
+    &= \int_{(0,1)} \mu\,p(\mu \vert y_{1:t})\,{\rm d}\mu\\
+    &= \int_{(0,1)} \mu\,\sum_{\ell_t=0}^t p(\mu, \ell_t \vert y_{1:t})\,{\rm d}\mu\\
+    &= \sum_{\ell_t=0}^t\int_{(0,1)} \mu\, p(\ell_t \vert y_{1:t})\,p(\mu \vert \ell_t, y_{1:t})\,{\rm d}\mu\\
+    &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \int_{(0,1)} \mu\,p(\mu \vert \ell_t, y_{1:t})\,{\rm d}\mu\\
+    &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \int_{(0,1)} \mu\,p(\mu \vert y_{t-\ell_t+1:t})\,{\rm d}\mu\\
+    &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \frac{a_{t-\ell_t+1:t}}{a_{t - \ell_t + 1:t} + b_{t - \ell_t + 1:t}}
+\end{aligned}
+$$
+{{< /math >}}
+
 ## Implementation of the BOCD
 Despite the simplicity of the BOCD algorithm, one of the main struggles I faced when reading the original paper is its implementation.
 
@@ -538,7 +553,6 @@ In this section, we provide a detailed description on the implementation of BOCD
 First, we note that the computational complexity of the algorithm is *linear in time*.
 This means that the amount of computations we have to perform increases by one at each new timestep.
 To see this, consider the array below, which specifies the available data collections to compute $p(\ell_t, y_{1:t})$
-
 {{< math >}}
 $$
 \begin{array}{c|ccccc}
@@ -555,17 +569,39 @@ t & & & & & & \\
 \end{array}
 $$
 {{< /math >}}
-The BOCD algorithm updates the joint from the top-right to the bottom-left
-for $\ell_t > 1$ and from all columns at row $t-1$ to row $t$ for $\ell_t = 0$.
 
-This means that
-$p(\ell_t, y_{1:t})$ gets information from
+If $\ell_t > 0$, the BOCD algorithm updates the joint $p(\ell_t, y_{1:t})$ diagonally, i.e.,
+{{< math >}}
+$$
+    {\color{teal} p(\ell_{t} - 1, y_{1:t-1})} \to {\color{orange} p(\ell_{t}, y_{1:t})} \gets y_t
+$$
+{{< /math >}}
 
 {{< math >}}
 $$
+\begin{array}{c|ccccc}
+t & & & & & & \\
+0 & \emptyset & & & & & & \\
+1 & \emptyset & y_1 & & & & & \\
+2 & \emptyset & y_2 & y_{1:2} & & & & \\
+3 & \emptyset & y_3 & y_{2:3} & y_{1:3} & & & \\
+4 & \emptyset & y_4 & \color{teal}{y_{3:4}} & y_{2:4} & y_{1:4} & & \\
+5 & \emptyset & y_5 & y_{4:5} & \color{orange}{y_{3:5}} & y_{2:5} & y_{1:5} & \\
+6 & \emptyset & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
+\hline
+\ell_t & 0 & 1 & 2 & 3 & 4 & 5 & 6
+\end{array}
+$$
+{{< /math >}}
+
+Conversely, if $\ell_t = 0$, the BOCD algorithm updates the joint $p(0, y_{1:t})$ from all values at $t-1$, i.e.,
+{{< math >}}
+$$
 \begin{aligned}
-    (\emptyset, y_1) \to p(0, y_{1:2})
-    (\emptyset, y_1) \to p(0, y_{1:2})
+    {\color{teal} p(0, y_{1:t-1})} &\to {\color{orange} p(0, y_{1:t})}\\
+    {\color{teal} p(1, y_{1:t-1})} &\to {\color{orange} p(0, y_{1:t})}\\
+    &\vdots \\
+    {\color{teal} p(t-1, y_{1:t-1})} &\to {\color{orange} p(0, y_{1:t})}
 \end{aligned}
 $$
 {{< /math >}}
@@ -574,20 +610,20 @@ $$
 $$
 \begin{array}{c|ccccc}
 t & & & & & & \\
-0 & \color{orange}{\emptyset} & & & & & & \\
-1 & \color{orange}{\emptyset} & y_1 & & & & & \\
-2 & \color{orange}{\emptyset} & y_2 & y_{1:2} & & & & \\
-3 & \color{orange}{\emptyset} & y_3 & y_{2:3} & y_{1:3} & & & \\
-4 & \color{orange}{\emptyset} & y_4 & y_{3:4} & y_{2:4} & y_{1:4} & & \\
+0 & \emptyset & & & & & & \\
+1 & \emptyset & y_1 & & & & & \\
+2 & \emptyset & y_2 & y_{1:2} & & & & \\
+3 & \emptyset & y_3 & y_{2:3} & y_{1:3} & & & \\
+4 & \color{teal}\emptyset & \color{teal}{y_4} & \color{teal}{y_{3:4}} & \color{teal}{y_{2:4}} & \color{teal}{y_{1:4}} & & \\
 5 & \color{orange}{\emptyset} & y_5 & y_{4:5} & y_{3:5} & y_{2:5} & y_{1:5} & \\
-6 & \color{orange}{\emptyset} & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
+6 & \emptyset & y_6 & y_{5:6} & y_{4:6} & y_{3:6} & y_{2:6} & y_{1:6} \\
 \hline
 \ell_t & 0 & 1 & 2 & 3 & 4 & 5 & 6
 \end{array}
 $$
 {{< /math >}}
 
-, which means that, for instance,
+ which means that, for instance,
 the information accrues as follows
 
 
@@ -626,6 +662,8 @@ $$
 {{< /math >}}
 for $\ell_{t} = 0$.
 
+# The BOCD in practice
+We go back to the non-stationary coin tosses dataset shown above
 
 ## Probability of the runlength
 ![bocd log-joint](./bocd-log-joint-full.png)
@@ -633,9 +671,15 @@ for $\ell_{t} = 0$.
 ## Online estimate of the probability of heads
 ![posterior with bocd changepoint](./posterior-proba-bocd-full.png)
 
-## Overcoming the linear complexity
 
-## Drawbacks of the BOCD algorithm
+# Drawbacks of the BOCD algorithm
+In the form we have presented the BOCD algorithm,
+we assumed a fixed and known hazard rate $\pi$,
+we assumed a well-specified model. This can be detrimental in scenarios with outliers or misspecified models.
+Grows linear in time: at time $t$, we require $t$ copies of possible model parameters
+
+# Overcoming the linear complexity
+In this section, we provide a simple way to overcome the linear complexity of the BOCD.
 
 # Conclusion
 
