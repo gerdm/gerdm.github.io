@@ -35,10 +35,6 @@ We then present filtering, smoothing, prediction, and fixed-lag-smoothing as com
 on different timeframes.
 This post concludes by introducing a data-driven-approach to perform filtering using a pure data-driven approach.
 
-Throughout this post, we denote random variables in capital letters $X$ and
-an in lower-case $x$ a sample of the random variable.
-We defer proofs of the propositions to the appendix.
-
 # Signal plus noise models
 The story of the Kalman filter begins with signal plus noise models.
 A signal plus noise model assumes that a random process of *measurements*
@@ -182,7 +178,9 @@ As we see, the innovation process
 {{< math >}}${\cal E}_{1:t}${{< /math >}}
 is built *sequentially*.
 
-We show some properties of the innovation process in the following proposition
+Innovations have multiple properties that allows the working
+with $(\text{BLUP.1})$ much more tractable.
+We show this in the following proposition.
 
 
 ### Proposition 2
@@ -191,6 +189,7 @@ Let $Y_{1:j}$ be a signal-plus-noise random process and
 Then,
 {{< math >}}
 $$
+\tag{I.2}
     {\rm Cov}({\cal E}_t, {\cal E}_j)=
     \begin{cases}
     0 & \text{if } t\neq j,\\
@@ -203,13 +202,14 @@ with $S_j = {\rm Var}({\cal E}_j)$.
 Furthermore, the measurement process and the innovation process satisfy the relationship
 {{< math >}}
 $$
-\tag{I.2}
+\tag{I.3}
     Y_{1:j} = {\bf L}\,{\cal E}_{1:j},
 $$
 {{< /math >}}
 with ${\bf L}$ a lower-triangular matrix with elements
 {{< math >}}
 $$
+\tag{I.4}
     {\bf L}_{t,j} =
     \begin{cases}
     {\rm Cov}(Y_t, {\cal E}_j)\,S_j^{-1} & \text{if } j < t, \\
@@ -222,19 +222,21 @@ $$
 Finally, it can also be shown that the variance of the measurement process satisfies
 {{< math >}}
 $$
-\tag{I.3}
+\tag{I.5}
     {\rm Var}(Y_{1:T}) = {\bf L}\,{\bf S}\,{\bf L}^\intercal.
 $$
 {{< /math >}}
 The result above corresponds to the Cholesky decomposition.
 
+See [proof 2]({{<ref "#proof-of-proposition-2" >}}) in the Appendix for a proof.
+
 ## Building an innovation sample
 
-The terms $(\text{I.1})$ and $(\text{I.2})$ provide two ways to estimate a sample of innovations $\varepsilon_{1:j}$
+The terms $(\text{I.1})$ and $(\text{I.3})$ provide two ways to estimate a sample of innovations $\varepsilon_{1:j}$
 given a sample of measurements $y_{1:j}$:
 1. estimate $\varepsilon_t$ sequentially given $y_t$ and $\varepsilon_{1:t-1}$
 following $(\text{I.1})$;
-2. wait until we have access to $y_{1:T}$, and then compute the matrix ${\bf L}$ to solve the system of linear equations
+2. wait until we have access to $y_{1:T}$, and using ${\bf L}$, solve the system of linear equations
 {{< math >}}${\bf L}\,\varepsilon_{1:T} = y_{1:T}${{< /math >}} for the unknown vector $\varepsilon_{1:T}$, following $(\text{I.2})$.
 
 Case 1. is *online* and case 2. is *offline*.
@@ -264,11 +266,14 @@ Furthermore, the error-variance covariance matrix of the BLUP takes the form
 {{< math >}}
 $$
 \begin{aligned}
+    \tag{EVC.2}
     {\rm Var}(f_t - f_{t|j})
     = {\rm Var}(f_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
 \end{aligned}
 $$
 {{< /math >}}
+
+See [proof 3]({{<ref "#proof-of-proposition-3" >}}) in the Appendix for a proof.
 
 
 Equation $(\text{BLUP.2})$ highlights a key property when working with innovations in estimating the BLUP:
@@ -552,7 +557,7 @@ latent_pred = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
 # Appendix
 
 ### Proof of proposition 1
-Here, we provide a detailed proof of [proposition 1]({{<ref "#proposition-1">}}).
+Here, we provide a detailed proof of [Proposition 1]({{<ref "#proposition-1">}}).
 Let
 {{< math >}}
 $$
@@ -597,15 +602,90 @@ Where the last line follows from the definition of ${\bf A}_\text{opt}$.
 {{< math >}} $$ \ \tag*{$\blacksquare$} $$ {{< /math >}}
 
 ### Proof of proposition 2
+Here, we provide a proof of [Proposition 2]({{<ref "#proposition-2">}}).
+
+To show $(\text{I.2})$, first note that
+{{< math >}}${\rm Cov}({\cal E}_t, {\cal E}_t) = {\rm Var}({\cal E}_t) = S_t${{< /math >}}
+for all $t \in {\cal T}$.
+Next, we show that the off-diagonal terms are zero.
+Consider
+{{< math >}}
+$$
+\begin{aligned}
+    &{\rm Cov}({\cal E}_1, {\cal E}_2)\\
+    &= {\rm Cov}\Big(Y_1,\,Y_2 - {\rm Cov}(Y_2,\,{\cal E}_1)S_1^{-1}{\cal E}_1\Big)\\
+    &= {\rm Cov}(Y_1,\,Y_2) - {\rm Cov}\Big(Y_1,\,{\rm Cov}(Y_2,\,{\cal E}_1)S_1^{-1}{\cal E}_1\Big)\\
+    &= {\rm Cov}(Y_1,\,Y_2) - {\rm Cov}\Big(Y_1,\,{\rm Cov}(Y_2,\,Y_1)S_1^{-1}Y_1\Big)\\
+    &= {\rm Cov}(Y_1,\,Y_2) - {\rm Cov}(Y_1, Y_1)S_1^{-1}{\rm Cov}(Y_1\,Y_2)\\
+    &= {\rm Cov}(Y_1,\,Y_2) - S_1\,S_1^{-1}{\rm Cov}(Y_1\,Y_2)\\
+    &= 0.
+\end{aligned}
+$$
+{{< /math >}}
+
+Next, we show $(\text{I.3})$.
+By definition, the innovation at time $t$ is
+{{< math >}}
+$$
+    {\cal E}_t = Y_t - \sum_{k=1}^{t-1}{\rm Cov}(Y_t, {\cal E}_k)\,{\bf S}_k^{-1}\,{\cal E}_j
+$$
+{{< /math >}}
+Define the lower triangular matrix ${\bf L}$ as in $(\text{I.4})$.
+Then
+{{< math >}}
+$$
+\begin{aligned}
+    {\cal E}_t
+    &= Y_t - \sum_{k=1}^{t-1}{\bf L}_{t,k}\,{\cal E}_k\\
+    &= Y_t + {\bf L}_{t,t}\,{\cal E}_t - {\bf L}_{t,t}\,{\cal E}_t - \sum_{k=1}^{t-1}{\bf L}_{t,k}\,{\cal E}_k\\
+    &= Y_t + {\bf L}_{t,t}\,{\cal E}_t - \sum_{k=1}^{t}{\bf L}_{t,k}\,{\cal E}_k\\
+    &= Y_t + {\cal E}_t - \sum_{k=1}^{t}{\bf L}_{t,k}\,{\cal E}_k.
+\end{aligned}
+$$
+{{< /math >}}
+The last equality corresponds to the $t$-th entry of the vector resulting form the matrix-vector multiplication
+{{< math >}}$({\bf L}\,{\cal E}_{1:T})_t${{< /math >}}.
+So that
+{{< math >}}${\cal E}_t = Y_t + {\cal E}_t - ({\bf L}\,{\cal E}_{1:T})_t${{< /math >}}.
+Then, we can write innovation vector as
+{{< math >}}
+$$
+\begin{aligned}
+    &{\cal E}_{1:T} = Y_{1:T} + {\cal E}_{1:T} - {\bf L}\,{\cal E}_{1:T}\\
+    \iff & 0 = Y_{1:T} - {\bf L}\,{\cal E}_{1:T}\\
+    \iff & Y_{1:T} = {\bf L}\,{\cal E}_{1:T}.
+\end{aligned}
+$$
+{{< /math >}}
+
+
+
+Finally, to show $(\text{I.5})$, note that
+{{< math >}}
+$$
+\begin{aligned}
+    {\rm Var}(Y_{1:t})
+    &= {\rm Var}({\bf L}\,{\cal E}_{1:T})\\
+    &= {\rm Cov}({\bf L}\,{\cal E}_{1:T}, {\bf L}\,{\cal E}_{1:T})\\
+    &= {\bf L}\,{\rm Cov}({\cal E}_{1:T}, {\cal E}_{1:T}){\bf L}^\intercal\\
+    &= {\bf L}\,{\rm Var}({\cal E}_{1:T}){\bf L}^\intercal\\
+    &= {\bf L}\,{\bf R}\,{\bf L}^\intercal.
+\end{aligned}
+$$
+{{< /math >}}
+Because ${\bf L}$ is a lower triangular matrix, it follows that the last equality corresponds to the Cholesky
+cholesky decomposition of ${\rm Var}(Y_{1:T})$
+{{< math >}} $$ \ \tag*{$\blacksquare$} $$ {{< /math >}}
 
 
 ### Proof of proposition 3
+Here, we provide a detailed proof of [Proposition 3]({{<ref "#proposition-3">}}).
 Using $(\text{BLUP.1})$ and $(\text{I.2})$, we see that
 {{< math >}}
 $$
 \begin{aligned}
     {\bf A}_\text{opt}
-    &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(y_{1:j})^{-1}\\
+    &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}\\
     &= {\rm Cov}(F_t, {\bf L}\,{\cal E}_{1:j})\,{\rm Var}({\bf L}\,{\cal E}_{1:j})^{-1}\\
     &= {\rm Cov}(F_t, {\cal E}_{1:j})\,{\bf L}^\intercal\,\{{\bf L}{\rm Var}({\cal E}_{1:j}){\bf L}^\intercal\}^{-1}\\
     &= {\rm Cov}(F_t, {\cal E}_{1:j})\,{\bf L}^\intercal\,{\bf L}^{-\intercal}\, {\rm Var}({\cal E}_{1:j})^{-1}{\bf L}^{-1}\\
@@ -633,7 +713,7 @@ Furthermore, the error variance-covariance matrix of the BLUP takes the form
 {{< math >}}
 $$
 \begin{aligned}
-    &{\rm Var}(F_t - f_{t|j})\\
+    &{\rm Var}(F_t - F_{t|j})\\
     &= {\rm Var}(F_t) - {\bf A}_\text{opt}\,{\rm Var}\,(Y_{1:j})\,{\bf A}_\text{opt}^\intercal\\
     &= {\rm Var}(F_t) -
     {\rm Cov}(F_t, {\cal E}_{1:j})\, {\rm Var}({\cal E}_{1:t})^{-1}{\bf L}^{-1}
