@@ -446,9 +446,10 @@ for all values
 {{< math >}}$\ell_t \in \{0, \ldots, t\}${{< /math >}}
 and then normalise over all of the computed values to obtain the posterior probability mass.
 
-### Estimating the joint density
-Estimation of the joint density following the BOCD algorithm is done recursively.
-For this, we note that the joint density at time $t$ can be rewritten as
+### Estimating the Joint Density
+
+In the BOCD algorithm, the estimation of the joint density is done recursively, allowing for efficient detection of changepoints as new data arrives. The joint density at time $t$ can be rewritten as:
+
 {{< math >}}
 $$
 \begin{aligned}
@@ -462,23 +463,24 @@ $$
 $$
 {{< /math >}}
 
-Under certain conditions, this will yield a recursive formula.
-We formalise this in the following proposition.
+This decomposition gives us a recursive relationship that makes changepoint detection computationally feasible in an online setting. We formalise this process in the following proposition.
 
 #### Proposition 1
-Suppose that
+Let $\pi \in (0, 1)$ and suppose that the probability of a changepoint follows the distribution:
+
 {{< math >}}
 $$
     p(\ell_t \vert \ell_{t-1}) =
     \begin{cases}
     \pi & \text{if } \ell_t = \ell_{t-1} + 1,\\
     1 - \pi & \text{if } \ell_{t} = 0,\\
-    0 & \text{otherwise},
+    0 & \text{otherwise}.
     \end{cases}
 $$
 {{< /math >}}
-for $\pi\in(0,1)$.
-Assume that the posterior predictive for $y_t$ is independent of $\ell_{t-1}$, conditioned on $\ell_t$ and $y_{1:t-1}$ i.e.,
+
+Further assume that the posterior predictive distribution for $y_t$ is independent of $\ell_{t-1}$, conditioned on $\ell_t$ and $y_{1:t-1}$, i.e.,
+
 {{< math >}}
 $$
     p(y_t \vert \ell_t, \ell_{t-1}, y_{1:t-1})
@@ -486,28 +488,32 @@ $$
     = \int p(y_t \vert \theta)\,p(\theta \vert \ell_t, y_{1:t-1}){\rm d}\theta.
 $$
 {{< /math >}}
-Then, the joint density takes the form
+
+Then, the joint density can be computed recursively as:
+
+For $\ell_t = \ell_{t-1} + 1$ (i.e., no changepoint):
 {{< math >}}
 $$
     p(\ell_t, y_{1:t}) =
     \left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right)\,
     (1-\pi)\,
-    p(\ell_{t-1}, y_{1:t-1})
+    p(\ell_{t-1}, y_{1:t-1}),
 $$
 {{< /math >}}
-for $ \ell_{t} = \ell_{t-1} + 1$,
-and
+
+and for $\ell_t = 0$ (i.e., a changepoint occurs):
+
 {{< math >}}
 $$
     p(\ell_t, y_{1:t}) =
-    \left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right)\,
+    \left(\frac{y_t\,a_{0} + (1 - y_t)\,b_{0}}{a_{0} + b_{0}}\right)\,
     \pi\,
-    \sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1})
+    \sum_{\ell_{t-1}=0}^{t-1}p(\ell_{t-1}, y_{1:t-1}).
 $$
 {{< /math >}}
-for $\ell_{t} = 0$.
 
-Where we have defined the quantities
+where we have defined the quantities:
+
 {{< math >}}
 $$
 \begin{aligned}
@@ -516,55 +522,51 @@ $$
 \end{aligned}
 $$
 {{< /math >}}
+See [proof 1]({{<ref "#proof-of-proposition-1" >}}) in the Appendix for a proof.
 
-Proposition 1 shows that at time $t$, the log-joint $p(r_t, y_{1:t})$ for $r_t > 0$
-is given by the product of
-the log-joint at time $t-1$, for $r_{t-1} = r_{t} - 1$;
-the probability of a increase in the runlength (or no changepoint), i.e., $1 - \pi$; and
-the posterior predictive density $p(y_t \vert r_t, y_{1:t-1})$.
+Proposition 1 shows that at time $t$, the joint density $p(\ell_t, y_{1:t})$ for $\ell_t > 0$ is given by the product of the joint density at time $t-1$ (for $\ell_{t-1} = \ell_t - 1$), the probability of no changepoint ($1 - \pi$), and the posterior predictive density $p(y_t \vert \ell_t, y_{1:t-1})$.
 
-### BOCD predictions
-To recap, the BOCD algorithm estimates the joint density between the runlength (lookback window)
-and the data  $p(\ell_t, y_{1:t})$ recursively as a function of $p(\ell_{t-1}, y_{1:t-1})$.
-The joint density can then be used to compute the posterior over the runlength via
+## BOCD Predictions
+
+To recap, the BOCD algorithm estimates the joint density between the runlength (lookback window) $\ell_t$ and the data $y_{1:t}$ recursively, using the previous joint density $p(\ell_{t-1}, y_{1:t-1})$. This recursive structure allows us to efficiently update the model's beliefs and detect changepoints as new data comes in.
+
+The joint density can be used to compute the posterior over the runlength, which reflects how likely each lookback window is, given the data:
 {{< math >}}
 $$
     p(\ell_t \vert y_{1:t}) = \frac{p(\ell_t, y_{1:t})}{p(y_{1:t})} = \frac{p(\ell_t, y_{1:t})}{\sum_{\ell_t'=0}^t p(\ell_t', y_{1:t})}.
 $$
 {{< /math >}}
 
-Having estimated the set of values
-{{< math >}}$\{p(\ell_t \vert y_{1:t})\}_{\ell_t=0}^t${{< /math >}},
-a prediction for the value of heads is given by
+Once we have the set of posterior probabilities $\{p(\ell_t \vert y_{1:t})\}_{\ell_t=0}^t$, we can make predictions for the probability of heads, $\mu$, by taking a weighted average over different lookback windows. Specifically, the expected value of $\mu$ is given by:
 {{< math >}}
 $$
 \begin{aligned}
     \mathbb{E}[\mu \vert y_{1:t}]
-    &= \int_{(0,1)} \mu\,p(\mu \vert y_{1:t})\,{\rm d}\mu\\
-    &= \int_{(0,1)} \mu\,\sum_{\ell_t=0}^t p(\mu, \ell_t \vert y_{1:t})\,{\rm d}\mu\\
-    &= \sum_{\ell_t=0}^t\int_{(0,1)} \mu\, p(\ell_t \vert y_{1:t})\,p(\mu \vert \ell_t, y_{1:t})\,{\rm d}\mu\\
-    &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \int_{(0,1)} \mu\,p(\mu \vert \ell_t, y_{1:t})\,{\rm d}\mu\\
     &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \int_{(0,1)} \mu\,p(\mu \vert y_{t-\ell_t+1:t})\,{\rm d}\mu\\
-    &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \frac{a_{t-\ell_t+1:t}}{a_{t - \ell_t + 1:t} + b_{t - \ell_t + 1:t}}
+    &= \sum_{\ell_t=0}^t p(\ell_t \vert y_{1:t}) \frac{a_{t-\ell_t+1:t}}{a_{t - \ell_t + 1:t} + b_{t - \ell_t + 1:t}}.
 \end{aligned}
 $$
 {{< /math >}}
 
+This formula uses the posterior probabilities of each runlength to compute a weighted sum over the expected values of $\mu$, where the weights are determined by the probability of each lookback window.
+
 ## Implementation of the BOCD
-### The log-joint
-In practice, computing the equations above can lead to numerical underflow.
-To go around this, it is computationally convenient to compute the log-joint-density $\log p(r_t, y_{1:t})$.
-This takes the form
+
+### The Log-Joint Density
+
+In practice, directly computing the joint density can lead to numerical underflow, especially when dealing with small probabilities. To address this, we compute the log-joint-density $\log p(\ell_t, y_{1:t})$, which improves numerical stability. The log-joint for $\ell_t = \ell_{t-1} + 1$ (i.e., no changepoint) is given by:
+
 {{< math >}}
 $$
     \log p(\ell_t, y_{1:t}) =
     \log\left(\frac{y_t\,a_{t-\ell_t-1:t-1} + (1 - y_t)\,b_{t-\ell_t-1:t-1}}{a_{t-\ell_t-1:t-1} + b_{t-\ell_t-1:t-1}}\right) + 
-    \log(1-\pi)+
-    \log p(\ell_{t-1}, y_{1:t-1})
+    \log(1-\pi) +
+    \log p(\ell_{t-1}, y_{1:t-1}),
 $$
 {{< /math >}}
-for $ \ell_{t} = \ell_{t-1} + 1$,
-and
+
+and for $\ell_t = 0$ (i.e., a changepoint occurs):
+
 {{< math >}}
 $$
 \begin{aligned}
@@ -585,6 +587,8 @@ $$
 $$
 {{< /math >}}
 for $\ell_{t} = 0$.
+
+By operating in log-space, we avoid numerical underflow while efficiently computing the recursive joint densities and detecting changepoints.
 
 ### The recursive updates
 In this section, we provide a detailed description on the implementation of BOCD for the BB-model.
@@ -757,43 +761,48 @@ mean after these 20 timesteps.
 In this section, we provide a simple way to overcome the linear complexity of the BOCD.
 This allows us to run the algorithm indefinitely without incurring an increase in computational cost.
 The resulting algorithm maintains a *buffer* of $K \geq 1$ possible runlengths.
-Suppose that, at time $t\geq K$, we have these $K$ values in the form
+
+Suppose that, at time $t \geq K$, we have these $K$ values in the form:
 {{< math >}}
 $$
     p(\ell_{t,k}, y_{1:t}) \quad \text{for } k=1, \ldots, K.
 $$
 {{< /math >}}
-Then, at time $t+1$, we update each element in the *buffer* to obtain
+
+Then, at time $t+1$, we update each element in the *buffer* to obtain:
+{{< math >}}
 $$
-    p(\ell_{t+1,k}, y_{1:t+1}) \quad \text{for } k=0, \ldots, K.
+    p(\ell_{t+1,k}, y_{1:t+1}) \quad \text{for } k=0, \ldots, K,
 $$
+{{< /math >}}
 where $p(\ell_{t+1,0}, y_{1:t+1}) = p(0, y_{1:t+1})$.
-We then sort
-{{< math >}}$\{p(\ell_{t,0}, y_{1:t+1}), \ldots, p(\ell_{t,K}, y_{1:t+1})\}${{< /math >}}
-in descending order and remove the smallest element to obtain the new $K$ values.
-The algorithm then proceeds as normal.
+
+We then sort:
+{{< math >}}$\{p(\ell_{t,0}, y_{1:t+1}), \ldots, p(\ell_{t,K}, y_{1:t+1})\}${{< /math >}}  
+in descending order and remove the smallest element to obtain the new $K$ values. The algorithm then proceeds as normal.
 
 For $t < K$, we simply evaluate all possible values until the *buffer* is filled.
 
 # Drawbacks of the BOCD algorithm
-Despite the relative simplicity of the BOCD, it does come with a few drawbacks.
-First, in the form we have presented the BOCD algorithm,
-we assumed a fixed and known hazard rate $\pi$.
-Not knowing this value may incur in more or less detection of changepoints than there actually are.
-Second, we assumed a well-specified model. This can be detrimental in scenarios with outliers or misspecified models.
-Third, we only consider conjugate models.
-Fourth, we assume that regime changes occur abruptly, which does not allow for *smooth* transition between regime changes.
-Despite these drawbacks. The BOCD algorithm is a good first approximation to tackle the problem
-of non-stationarity from a Bayesian perspective.
+Despite the relative simplicity of BOCD, it does come with a few drawbacks.
 
-# Conclusion
+First, in the form we have presented the BOCD algorithm, we assumed a fixed and known hazard rate, $\pi$. If this value is unknown or misestimated, it can lead to either over-detection or under-detection of changepoints.
+
+Second, we assumed a well-specified model. This can be problematic in scenarios with outliers or when the model is misspecified, potentially leading to inaccurate changepoint detection.
+
+Third, we only considered conjugate models, which limits the flexibility of the approach.
+
+Finally, we assumed that regime changes occur abruptly, without allowing for *smooth* transitions between regimes. This may not always be realistic in real-world scenarios where gradual changes are common.
+ 
+The BOCD algorithm is a solid first approximation for tackling the problem of non-stationarity from a Bayesian perspective.
+
 
 ---
 
 # Appendix
 
 ## Proof of Proposition 1
-Here, we show that
+Here, we show [Proposition 1]({{<ref "#proposition-1">}}).
 {{< math >}}
 $$
     p(\ell_t, y_{1:t}) =
@@ -820,5 +829,116 @@ $$
 $$
 {{< /math >}}
 are the posterior parameters for the BB model at time $t$, under a runlength of size $\ell$.
+
+We begin by rewriting the log-joint
+{{< math >}}
+$$
+\begin{aligned}
+    p(\ell_t,\,y_{1:t})
+    &= \sum_{j=1}^{t-1} p(\ell_t, \ell_{t-1}, y_{1:t})\\
+    &= \sum_{j=1}^{t-1} p(\ell_t, \ell_{t-1}, y_{1:t-1}, y_t)\\
+    &= \sum_{j=1}^{t-1} p(\ell_{t-1}, y_{1:t-1})\,p(\ell_t,\,y_t\vert \ell_{t-1}, y_{1:t-1})\\
+    &= \sum_{j=1}^{t-1} p(\ell_{t-1}, y_{1:t-1})\,p(\ell_t,\,y_t\vert \ell_{t-1}, y_{1:t-1})\\
+    &= \sum_{j=0}^{t-1}
+    \underbrace{
+    p(\ell_{t-1}, y_{1:t-1})
+    }_{({\rm A})}
+    \,
+    \underbrace{
+    p(\ell_t,\vert \ell_{t-1}, y_{1:t-1})
+    }_{({\rm B})}
+    \,
+    \underbrace{
+    p(y_t \vert \ell_t, \ell_{t-1}, y_{1:t-1})
+    }_{({\rm C})}
+\end{aligned}
+$$
+{{< /math >}}
+
+The value of $({\rm A})$ is assumed to be computed at time $t-1$ for $j=1,\ldots, t-1$.
+
+Next, $\ell_t$ is assumed to be independent on the $y_{1:t-1}$ conditioned on $\ell_{t-1}$.
+So that $(\text{B})$ becomes
+{{< math >}}
+$$
+    p(\ell_t\vert \ell_{t-1}) =
+    \begin{cases}
+    \pi & \ell_t = 0,\\
+    1 - \pi & \ell_{t} = \ell_{t-1} + 1,\\
+    0 & \text{otherwise}.
+    \end{cases}
+$$
+{{< /math >}}
+
+To determine $({\rm C})$, first note that
+{{< math >}}
+$$
+    p(y_t \vert \ell_t, \ell_{t-1}, y_{1:t-1}) = p(y_t \vert \ell_t, y_{1:t-1}).
+$$
+{{< /math >}}
+Next,
+{{< math >}}
+$$
+\begin{aligned}
+    p(y_t \vert \ell_t, y_{1:t-1})
+    &= \int p(\mu, y_t \vert \ell_t, y_{1:t-1}) {\rm d}\mu\\
+    &= \int p(\mu \vert \ell_t, y_{1:t-1})\,p(y_t \vert \mu) {\rm d}\mu\\
+    &= \int p(\mu \vert y_{t-1-{\ell_t}:t-1})\,p(y_t \vert \mu) {\rm d}\mu\\
+    &= \int {\rm Beta}(\mu \vert a_{t-1-{\ell_t}:t-1}, b_{t-1-{\ell_t}:t-1})\,{\rm Bern}(y_t \vert \mu)  {\rm d}\mu\\
+    &= \int
+    \frac{\Gamma(a_{t-1-{\ell_t}:t-1})\Gamma(b_{t-1-{\ell_t}:t-1})}{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1})}
+    \mu^{a_{t-1-{\ell_t}:t-1}}\,(1 - \mu)^{b_{t-1-{\ell_t}:t-1}}\,\mu^{y_t}\,(1-\mu)^{1 - y_t} {\rm d}\mu\\
+    &=
+    \frac{\Gamma(a_{t-1-{\ell_t}:t-1})\Gamma(b_{t-1-{\ell_t}:t-1})}{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1})}
+    \int\mu^{a_{t-1-{\ell_t}:t-1}}\,(1 - \mu)^{b_{t-1-{\ell_t}:t-1}}\,\mu^{y_t}\,(1-\mu)^{1 - y_t} {\rm d}\mu\\
+    &= 
+    \frac{\Gamma(a_{t-1-{\ell_t}:t-1})\Gamma(b_{t-1-{\ell_t}:t-1})}{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1})}
+    \frac{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1} + y_t + 1 - y_t)}
+    {\Gamma(a_{t-1-{\ell_t}:t-1} + y_t)\Gamma(b_{t-1-{\ell_t}:t-1} + 1 - y_t)}\\
+    &= 
+    \frac{\Gamma(a_{t-1-{\ell_t}:t-1})\Gamma(b_{t-1-{\ell_t}:t-1})}{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1})}
+    \frac{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1} + 1)}
+    {\Gamma(a_{t-1-{\ell_t}:t-1} + y_t)\Gamma(b_{t-1-{\ell_t}:t-1} + 1 - y_t)}
+\end{aligned}
+$$
+{{< /math >}}
+
+Note that $z\Gamma(z)$ = $\Gamma(z + 1)$. Then,
+{{< math >}}
+$$
+\begin{aligned}
+    &\frac{\Gamma(a_{t-1-{\ell_t}:t-1} + 1)\Gamma(b_{t-1-{\ell_t}:t-1})}{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1} + 1)}\\
+    =&\frac{\Gamma(a_{t-1-{\ell_t}:t-1})\Gamma(b_{t-1-{\ell_t}:t-1})}{\Gamma(a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1})}
+    \frac{a_{t-1-{\ell_t}:t-1}}{a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1}}
+\end{aligned}  
+$$
+{{< /math >}}
+
+Finally, we obtain
+{{< math >}}
+$$
+    p(y_t \vert \ell_t, y_{1:t-1}) =\frac{a_{t-1-{\ell_t}:t-1}}{a_{t-1-{\ell_t}:t-1} + b_{t-1-{\ell_t}:t-1}}
+$$
+{{< /math >}}
+for $y_t = 1$.
+
+
+With these equations, we see that
+{{< math >}}
+$$
+    p(\ell_{t+1}, y_{1:t+1}) = p(\ell_{t}, y_{1:t})\,(1 - \pi)\,\frac{y_{t+1}\,a_{t-k:t} + (1 - y_{t+1})\,b_{t-k:t}}{a_{t-k:t} + b_{t-k:t}}
+$$
+{{< /math >}}
+for $\ell_{t+1} \geq 1$, $\ell_t = \ell_{t+1} -1$.
+
+We also obtain
+{{< math >}}
+$$
+    p(\ell_{t+1}, y_{1:t+1}) =
+    \frac{y_{t+1}\,a_{0} + (1 - y_{t+1})\,b_{0}}{a_{0} + b_{0}}\sum_{\ell_t=0}^t p(\ell_{t}, y_{1:t})\,\pi
+$$
+{{< /math >}}
+for $\ell_{t+1} = 0$.
+{{< math >}} $$ \ \tag*{$\blacksquare$} $$ {{< /math >}}
 
 [^def-rlp]: There is a more rigorous definition based on the product-partition model, but we will follow this much more simplified approach.
