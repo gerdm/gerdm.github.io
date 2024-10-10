@@ -742,7 +742,7 @@ def bocd(y_values, pi):
     return mean_estimates
 ```
 
-For a full working example, see [this notebook](https://github.com/gerdm/bayes/blob/abe0e3f13d004a9d8bde179f8ac9375f3ba6050f/bocd.ipynb).
+For a full working example, see [this notebook](https://github.com/gerdm/bayes/blob/ddf84a3a84a2acbeb6b4f64c23b650460bcbdcdb/bocd-beta-bernoulli.ipynb).
 
 # The BOCD in practice
 In this section, we apply the BB-BOCD algorithm for the non-stationary coin tosses dataset shown above.
