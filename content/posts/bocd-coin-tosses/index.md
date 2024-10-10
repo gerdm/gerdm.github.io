@@ -13,7 +13,10 @@ tldr:
 
 
 # Introduction
-In a world where conditions constantly change, how can we accurately predict outcomes?
+In this post, we introduce the [Bayesian Online Changepoint Detection (BOCD)](https://arxiv.org/abs/0710.3742)
+model and its application for estimating the probability of heads
+in a sequence of coin tosses where the underlying probability changes over time.
+
 
 
 ## Flipping coins with fixed probability
