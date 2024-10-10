@@ -1,5 +1,5 @@
 ---
-title: "Non-stationary coin tosses - an introduction to the BOCD"
+title: "Non-stationary coin tosses - an introduction to the Bayesian online changepoint detection model (BOCD)"
 date: 2024-10-09
 description: "The Bayesian Online Changepoint Detection (BOCD) algorithm for binary data."
 katex: true
