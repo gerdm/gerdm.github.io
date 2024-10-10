@@ -16,7 +16,7 @@ This is the perspective that I have been studying for a few years now.
 A few months ago, however, I came across the "Kalman filter primer" book by Randall L. Eubank ---
 a small, densely-packed, and zero-motivation book on the Kalman filter (KF) and
 its derivation using only tools from linear algebra and basic concepts of statistics.
-Despite the not-so-well received perseption by some audience (it currently rates 2/5 stars in Amazon),
+Despite the not-so-well received perception by some audience (it currently rates 2/5 stars in Amazon),
 it contains some important lessons about how the KF is derived.
 In particular, it was surprising to me to learn just how much we have to assume in order to derive the KF.
 Moreover, that despite all these assumptions (many of which do not necessarily hold in practice),
@@ -33,7 +33,7 @@ the best-linear-unbiased estimate for signals-plus-noise models is derived.
 We then modify the result to make use of *innovations* to make the computation of the BLUP more efficient.
 We then present filtering, smoothing, prediction, and fixed-lag-smoothing as computing the BLUP
 on different timeframes.
-This post concludes by introducing a data-driven-approach to perform filtering using a pure data-driven approach.
+This post concludes by introducing a data-driven-approach to compute the BLUP over varying timeframes.
 
 # Signal plus noise models
 The story of the Kalman filter begins with signal plus noise models.
@@ -44,7 +44,7 @@ a predictable process
 {{< math >}}$F_{1:T}${{< /math >}}
 and an unpredictable process
 {{< math >}}${E}_{1:T}${{< /math >}}.
-We assume $(Y_t, F_t, E_t) \in {\mathbb R}^d$ for all
+We assume $(Y_t, F_t, E_t) \in {\mathbb R}^{3\times d}$ for all
 {{< math >}}$t \in {\cal T} = \{1, \ldots, T\}${{< /math >}},
 $d \geq 1$, and $T \gg d$.
 By _predictable_, we mean that the that the covariance between the measurement and the signal is not (necessarily) non-diagonal.
@@ -121,15 +121,15 @@ $$
     = {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}.
 $$
 {{< /math >}}
-Then, the best linear unbiased predictor (BLUP) of the signal at time $t$,
-given $Y_{1:j}$, is defined by
+Then, the best linear unbiased predictor (BLUP) of the signal $F_t$ given $Y_{1:j}$
+is given by
 {{< math >}}
 $$
 \begin{aligned}
 \tag{BLUP.1}
     F_{t|j}
-    &= {\bf A}_\text{opt}\,y_{1:j} \\
-    &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}\,y_{1:j}.
+    &= {\bf A}_\text{opt}\,Y_{1:j} \\
+    &= {\rm Cov}(F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}\,Y_{1:j}.
 \end{aligned}
 $$
 {{< /math >}}
@@ -144,21 +144,20 @@ $$
 $$
 {{< /math >}}
 
-See [proof 1]({{<ref "#proof-of-proposition-1" >}}) in the Appendix for a proof.
+For a proof, [see the Appendix]({{<ref "#proof-of-proposition-1" >}}).
 
 
 # The innovation process
-Assume that $d \ll j$, i.e., the dimension of the measurements is much lower than the number of timesteps $j$.
+Suppose that $d \ll j$, i.e., the dimension of the measurements is much lower than the number of timesteps $j$.
 Then, computing ${\rm (BLUP.1)}$ requires $O(j^3)$ operations ---
 this is because of the term ${\rm Var}(Y_{1:j})^{-1}$,
-which is a $j\times j$ positive definite matrix that we have to invert at every timeframe $j$.
-
+which is a $j\times j$ positive definite matrix that we have to invert at timeframe $j$.
 To go around this computational bottleneck, we introduce the concept of an innovation,
 which decorrelates measurements and allows for a more efficient computation of $(\text{BLUP.1})$.
+
 Denote by
 {{< math >}}${\cal E}_t${{< /math >}}
 an innovation random variable and $\varepsilon_t$ a sample of the random variable.
-
 The innovation random variable
 {{< math >}}${\cal E}_t${{< /math >}},
 derived from the measurement random variable $Y_{t}$ and the innovation process 
@@ -180,7 +179,7 @@ is built *sequentially*.
 
 Innovations have multiple properties that allows the working
 with $(\text{BLUP.1})$ much more tractable.
-We show this in the following proposition.
+We provide some of these properties below.
 
 
 ### Proposition 2
@@ -219,16 +218,16 @@ $$
 $$
 {{< /math >}}
 
-Finally, it can also be shown that the variance of the measurement process satisfies
+Finally, the variance of the measurement process satisfies
 {{< math >}}
 $$
 \tag{I.5}
     {\rm Var}(Y_{1:T}) = {\bf L}\,{\bf S}\,{\bf L}^\intercal.
 $$
 {{< /math >}}
-The result above corresponds to the Cholesky decomposition.
+The result above corresponds to the Cholesky decomposition of the variance matrix for the measurements.
 
-See [proof 2]({{<ref "#proof-of-proposition-2" >}}) in the Appendix for a proof.
+For a proof, see [the Appendix]({{<ref "#proof-of-proposition-2" >}}).
 
 ## Building an innovation sample
 
@@ -576,9 +575,11 @@ $$
 \end{aligned}
 $$
 {{< /math >}}
-Setting this last equality to zero recovers ${\bf A}_\text{opt}$ above.
+Setting this last equality to zero and solving for ${\bf A}$ recovers
+{{< math >}}${\bf A}_\text{opt} = {\rm Cov} (F_t, Y_{1:j})\,{\rm Var}(Y_{1:j})^{-1}${{< /math >}}
+above.
 
-Next, consider the error variance-covariance matrix
+Next, for the error variance-covariance matrix, we have
 {{< math >}}
 $$
 \begin{aligned}
@@ -604,11 +605,13 @@ Where the last line follows from the definition of ${\bf A}_\text{opt}$.
 ### Proof of proposition 2
 Here, we provide a proof of [Proposition 2]({{<ref "#proposition-2">}}).
 
-To show $(\text{I.2})$, first note that
+#### Proof of (I.2)
+To show $(\text{I.2})$, first note that the diagonal terms
 {{< math >}}${\rm Cov}({\cal E}_t, {\cal E}_t) = {\rm Var}({\cal E}_t) = S_t${{< /math >}}
 for all $t \in {\cal T}$.
+
 Next, we show that the off-diagonal terms are zero.
-Consider
+Observe that
 {{< math >}}
 $$
 \begin{aligned}
@@ -622,7 +625,37 @@ $$
 \end{aligned}
 $$
 {{< /math >}}
+By symmetry of the covariance matrix, we obtain
+{{< math >}}${\rm Cov}({\cal E}_2,\,{\cal E}_1) = ({\rm Cov}({\cal E}_1,\,{\cal E}_2))^\intercal = 0${{< /math >}}.
+A similar procedure shows that
+{{< math >}}${\rm Cov}({\cal E}_1, {\cal E}_3) = {\rm Cov}({\cal E}_3, {\cal E}_1) = 0${{< /math >}}.
+The general case holds by induction:
 
+Suppose that
+{{< math >}}
+$$
+    {\rm Cov}({\cal E}_i, {\cal E_{j-1}}) = 0 \ \text{for } i\geq 2,\,j-1=i+1,\ldots,T-1.
+$$
+{{< /math >}}
+i.e., an upper-triangular (off-diagonal) assumption.
+We show
+{{< math >}}${\rm Cov}({\cal E}_i, {\cal E}_j) = 0${{< /math >}}.
+By definition,
+{{< math >}}
+$$
+\begin{aligned}
+    &{\rm Cov}({\cal E}_i,\,{\cal E}_j)\\
+    &= {\rm Cov}\left({\cal E}_i,\,Y_j - \sum_{k=1}^{j-1}{\rm Cov}(Y_j, {\cal E}_k)S_k^{-1}{\cal E}_k\right)\\
+    &= {\rm Cov}\left({\cal E}_i,\,Y_j -
+    \sum_{\substack{k\neq i \\ {1 \leq k\leq j-1}}}{\rm Cov}(Y_j,\,{\cal E}_k)S_k^{-1}{\cal E}_k
+    - {\rm Cov}(Y_j,\,{\cal E}_i)S_i^{-1}{\cal E}_i
+    \right)\\
+    &...
+\end{aligned}
+$$
+{{< /math >}}
+
+#### Proof of (I.3)
 Next, we show $(\text{I.3})$.
 By definition, the innovation at time $t$ is
 {{< math >}}
@@ -658,8 +691,7 @@ $$
 $$
 {{< /math >}}
 
-
-
+#### Proof of (I.5)
 Finally, to show $(\text{I.5})$, note that
 {{< math >}}
 $$
