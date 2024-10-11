@@ -16,10 +16,11 @@ This is the perspective that I have been studying for a few years now.
 A few months ago, however, I came across the "Kalman filter primer" book by Randall L. Eubank ---
 a small, densely-packed, and zero-motivation book on the Kalman filter (KF) and
 its derivation using only tools from linear algebra and basic concepts of statistics.
-Despite the not-so-well received perception by some audience (it currently rates 2/5 stars in Amazon),
+Despite the not-so-well received perception of the book by some metrics,[^eubank-rating]
 it contains some important lessons about how the KF is derived.
-In particular, it was surprising to me to learn just how much we have to assume in order to derive the KF.
-Moreover, that despite all these assumptions (many of which do not necessarily hold in practice),
+In particular, it was surprising to me to learn just how much we have to assume in order to derive the KF from this
+*no-frills* perspective.
+More surprising still is that in practice, despite all these assumptions (many of which do not necessarily hold in practice),
 the KF *just works*.
 
 In these series of post, I summarise the most important lessons that I drew from the book.
@@ -47,6 +48,7 @@ and an unpredictable process
 We assume $(Y_t, F_t, E_t) \in {\mathbb R}^{3\times d}$ for all
 {{< math >}}$t \in {\cal T} = \{1, \ldots, T\}${{< /math >}},
 $d \geq 1$, and $T \gg d$.
+
 By _predictable_, we mean that the that the covariance between the measurement and the signal is not (necessarily) non-diagonal.
 By _unpredictable_, we mean that the covariance between the measurement and the noise is diagonal.
 This means
@@ -81,33 +83,28 @@ This assumption can be relaxed, but we keep this for sake of simplicity
 <!-- However, we only have access to the *measurements* $y_{1:T}$. -->
 
 # The best-linear unbiased predictor (BLUP)
-Denote by $y_{1:T}$ a sample of the measurement process $Y_{1:T}$.
+<!-- Denote by $y_{1:T}$ a sample of the measurement process $Y_{1:T}$.
 Similarly, denote by $f_{1:T}$ and $e_{1:T}$ the samples of
-the signal and the noise processes $F_{1:T}$ and $E_{1:T}$ respectively.
-Suppose, $(j,t)\in{\cal T}^2$
-and we are given a subset of the sampled measurements $y_{1:j} = (y_1, \ldots, y_j)$,
-but we do not observe $f_{1:T}$ nor $e_{1:T}$.
-We seek to find the matrix ${\bf A} \in \reals^{d\times j}$ that maps $y_{1:j}$
-to the (unobserved) signal $f_t$. We write this *linear predictor* as
+the signal and the noise processes $F_{1:T}$ and $E_{1:T}$ respectively. -->
+Take $(j,t)\in{\cal T}^2$.
+Consider a subset of the measurement process $Y_{1:j} = (Y_1, \ldots, Y_j)$.
+We seek to find a matrix ${\bf A} \in \reals^{d\times j}$ that maps $Y_{1:j}$
+to the signal $F_t$. We write this *linear predictor* as
 {{< math >}}
 $$
-    f_{t|j} =  {\bf A}\,y_{1:j}.
+    F_{t|j} =  {\bf A}\,Y_{1:j}.
 $$
 {{< /math >}}
-That is, we want the matrix ${\bf A}$ that weights all observations up to time $j$
-to make a prediction about the signal at time $t$.
-Depending on the value of $j$ (a frame of reference) this estimate takes different names.
-We come back to this point below.
-
 For mathematical convenience,
 our choice of ${\bf A}\in{\mathbb R}^{d\times j}$ is determined as the
 matrix that minimises the expected L2 error
 between the signal process $F_t$ and the *linear prediction process*
 {{< math >}}${\bf A}\,Y_{1:j}${{< /math >}}.
-Having found this matrix ${\bf A}$, the prediction ${\bf A}y_{1:t}$ is called
+Having found this matrix ${\bf A}$, the transformation ${\bf A}\,Y_{1:t}$ is called
 best linear unbiased predictor (BLUP).
 
-We formalise thie idea in the proposition below.
+
+We formalise the idea of a the BLUP in the proposition below.
 
 ### Proposition 1
 Suppose, $(j,t)\in{\cal T}^2$.
@@ -134,8 +131,8 @@ $$
 $$
 {{< /math >}}
 
-Then,
-the error variance-covariance matrix of the BLUP is defined by
+Finally,
+the error variance-covariance matrix of the BLUP is
 {{< math >}}
 $$
 \tag{EVC.1}
@@ -147,17 +144,23 @@ $$
 For a proof, [see the Appendix]({{<ref "#proof-of-proposition-1" >}}).
 
 
+### The BLUP in practice
+In practice, we are only given a sample of the measurement process $y_{1:j}$,
+so that we do not have access to the *true* sampled signal $f_t$.
+Because of this, our choice of ${\bf A}$ weights all measurement up to time $j$
+to make a prediction about the signal at time $t$ --- $f_{t|j}$.
+Depending on the value of $j$ (a frame of reference) this estimate takes different names.
+We come back to this point below.
+
 # The innovation process
 Suppose that $d \ll j$, i.e., the dimension of the measurements is much lower than the number of timesteps $j$.
 Then, computing ${\rm (BLUP.1)}$ requires $O(j^3)$ operations ---
 this is because of the term ${\rm Var}(Y_{1:j})^{-1}$,
-which is a $j\times j$ positive definite matrix that we have to invert at timeframe $j$.
+which is a $j\times j$ positive definite matrix that we have to invert at every timeframe $j$ of interest.
 To go around this computational bottleneck, we introduce the concept of an innovation,
 which decorrelates measurements and allows for a more efficient computation of $(\text{BLUP.1})$.
 
-Denote by
-{{< math >}}${\cal E}_t${{< /math >}}
-an innovation random variable and $\varepsilon_t$ a sample of the random variable.
+
 The innovation random variable
 {{< math >}}${\cal E}_t${{< /math >}},
 derived from the measurement random variable $Y_{t}$ and the innovation process 
@@ -180,7 +183,6 @@ is built *sequentially*.
 Innovations have multiple properties that allows the working
 with $(\text{BLUP.1})$ much more tractable.
 We provide some of these properties below.
-
 
 ### Proposition 2
 Let $Y_{1:j}$ be a signal-plus-noise random process and
@@ -231,19 +233,24 @@ For a proof, see [the Appendix]({{<ref "#proof-of-proposition-2" >}}).
 
 ## Building an innovation sample
 
+Denote by $\varepsilon_t$ a sample of the innovation random variable
+{{< math >}}${\cal E}_t${{< /math >}}.
 The terms $(\text{I.1})$ and $(\text{I.3})$ provide two ways to estimate a sample of innovations $\varepsilon_{1:j}$
 given a sample of measurements $y_{1:j}$:
 1. estimate $\varepsilon_t$ sequentially given $y_t$ and $\varepsilon_{1:t-1}$
 following $(\text{I.1})$;
-2. wait until we have access to $y_{1:T}$, and using ${\bf L}$, solve the system of linear equations
-{{< math >}}${\bf L}\,\varepsilon_{1:T} = y_{1:T}${{< /math >}} for the unknown vector $\varepsilon_{1:T}$, following $(\text{I.2})$.
+2. wait until we have access to $y_{1:T}$ and solve the system of linear equations
+{{< math >}}${\bf L}\,\varepsilon_{1:T} = y_{1:T}${{< /math >}} for the unknown vector $\varepsilon_{1:T}$, following $(\text{I.3})$.
 
 Case 1. is *online* and case 2. is *offline*.
 
 # The BLUP under innovations
 
 ## Proposition 3
-Suppose we have access to innovations $\varepsilon_{1:j}$ derived from measurements $y_{1:j}$ for some $j\in{\cal T}$.
+Consider the innovation process
+{{< math >}}${\cal E}_{1:j}${{< /math >}}
+derived from the measurement process $Y_{1:j}$
+for some $j \in {\cal T}$.
 Let
 {{< math >}}
 $$
@@ -251,14 +258,16 @@ $$
     {\bf K}_{t,k} = {\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}  
 $$
 {{< /math >}}
-be the *gain* matrix for the signal $F_t$, given the innovation ${\cal E}_k$.
+be the *gain* matrix of the signal $F_t$ from the innovation ${\cal E}_k$.
 
-The BLUP of the signal $f_t$ given $\varepsilon_{1:j}$ can be written
-as the sum of linear combinations of gain matrices and innovations:
+The BLUP of the signal $F_t$ given the measurement process
+{{< math >}}$Y_{1:j}${{< /math >}}
+can be written
+as a linear combinations of gain matrices and innovations:
 {{< math >}}
 $$
     \tag{BLUP.2}
-    f_{t|j} = \sum_{k=1}^j {\bf K}_{t,k}\,\varepsilon_k.
+    F_{t|j} = \sum_{k=1}^j {\bf K}_{t,k}\,{\cal E}_k.
 $$
 {{< /math >}}
 Furthermore, the error-variance covariance matrix of the BLUP takes the form
@@ -266,8 +275,8 @@ Furthermore, the error-variance covariance matrix of the BLUP takes the form
 $$
 \begin{aligned}
     \tag{EVC.2}
-    {\rm Var}(f_t - f_{t|j})
-    = {\rm Var}(f_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
+    {\rm Var}(F_t - F_{t|j})
+    = {\rm Var}(F_t) - \sum_{k=1}^j {\bf K}_{t,k}\,S_k\,{\bf K}_{t,k}^\intercal.
 \end{aligned}
 $$
 {{< /math >}}
@@ -276,13 +285,13 @@ See [proof 3]({{<ref "#proof-of-proposition-3" >}}) in the Appendix for a proof.
 
 
 Equation $(\text{BLUP.2})$ highlights a key property when working with innovations in estimating the BLUP:
-the number of computations to estimate $f_{t|j}$ becomes *linear* in time.
+the number of computations to estimate $F_{t|j}$ becomes *linear* in time.
 Furthermore, computing $(\text{BLUP.2})$ now requires $O(j d^3)$ operations.
 
 # Filtering, prediction, smoothing, and fixed-lag smoothing
 Recall that our quantity of interest takes the form $(\text{BLUP.2})$,
 which is determined by our frame of reference $j$.
-As a consequence, it determines the amount of information we have to make an estimate of the signal process.
+As a consequence, it determines the amount of information we need to take before making an estimate of the signal process at time $t$.
 
 In this section, we classify various BLUP estimates $f_{t|j}$ as a function of the frame of reference $j$.
 As we will see, the choice of $j$ can serve different purposes.
@@ -303,7 +312,7 @@ given the measurements $y_{1:t}$.
 
 We exemplify filtering in the table below.
 The top row shows the point in time in which the estimate is computed;
-the *signal* row shows in $\color{#00B7EB}\text{cyan}$ the target signal that we seek to obtain from the measurement;
+the *signal* row shows in $\color{#00B7EB}\text{cyan}$ the target signal that we seek to estimate from the measurements;
 finally the bottom row shows in $\color{orange}\text{orange}$ the measurements to consider to estimate the BLUP.
 
 {{< math >}}
@@ -321,7 +330,9 @@ As we see, filtering considers all measurements up to time $t$ to make an estima
 
 ## Prediction
 This quantity estimates the expected future signal $f_{t+i}$, given $y_{1:t}$.
-Here, $i \geq 1.$
+Here, $i \geq 1$.
+
+We define an $i$-th step prediction prediction as 
 {{< math >}}
 $$
 \tag{F.2}
@@ -374,13 +385,13 @@ $$
 {{< /math >}}
 We observe that smoothing requires all information up to time $T$ to make an estimate of the signal at time $t$.
 In this sense, smoothing is *offline*.
-There is a more computationally-efficient way to estimate ($F.3$),
+There is a more computationally-efficient way to estimate ($\text{F.3}$),
 which we will see in a later post.
 
 
 ## Fixed-lag smoothing
-This quantity is a middle ground between the filtering, which is *online*, and smoothing, which is *offline*.
-The idea behind an $i$-step fixed-lag smoother is to estimate the signal $f_t$ after observing $y_{1:t+i}$.
+This quantity is a middle ground between filtering, which is *online*, and smoothing, which is *offline*.
+The idea behind an $i$-step fixed-lag smoothing is to estimate the signal $f_t$ after observing $y_{1:t+i}$.
 That is, we must wait $i$ steps, before making an estimate of the signal $f_t$.
 {{< math >}}
 $$
@@ -414,9 +425,9 @@ We divide this experiment into a *train phase* where the quantities
 {{< math >}}${\rm Cov}(Y_t, {\cal E}_k)${{< /math >}},
 {{< math >}}$S_k${{< /math >}}, and
 ${\bf L}$
-are found;
+are estimated;
 and a *test phase* where the BLUP estimates $(\text{F.1 -- F.4})$
-are are obtained from measurement $y_{1:T}$ not seen in the train phase.
+are are obtained from sampled measurement $y_{1:T}$ not seen in the train phase.
 
 For this experiment, we make use of the `numpy` library, which includes the einsum operator,
 and the `einops` library.
@@ -634,12 +645,13 @@ The general case holds by induction:
 Suppose that
 {{< math >}}
 $$
-    {\rm Cov}({\cal E}_i, {\cal E_{j-1}}) = 0 \ \text{for } i\geq 2,\,j-1=i+1,\ldots,T-1.
+    {\rm Cov}({\cal E}_i, {\cal E}_k) = 0 \ \text{for } i\geq 2,\,k=i+1,\ldots,j-1.,
 $$
 {{< /math >}}
 i.e., an upper-triangular (off-diagonal) assumption.
 We show
 {{< math >}}${\rm Cov}({\cal E}_i, {\cal E}_j) = 0${{< /math >}}.
+
 By definition,
 {{< math >}}
 $$
@@ -650,10 +662,20 @@ $$
     \sum_{\substack{k\neq i \\ {1 \leq k\leq j-1}}}{\rm Cov}(Y_j,\,{\cal E}_k)S_k^{-1}{\cal E}_k
     - {\rm Cov}(Y_j,\,{\cal E}_i)S_i^{-1}{\cal E}_i
     \right)\\
-    &...
+    &={\rm Cov}({\cal E}_i,\, Y_j)
+    - \sum_{\substack{k\neq i \\ {1 \leq k\leq j-1}}}{\rm Cov}({\cal E}_i, {\cal E}_k)S_k^{-1}{\rm Cov}({\cal E}_k\,Y_j)
+    - {\rm Cov}({\cal E}_i, {\cal E}_i)S_i^{-1}\,{\rm Cov}({\cal E}_i, Y_j)\\
+    &= - \sum_{k=1}^{i-1}{\rm Cov}({\cal E}_i, {\cal E}_k)S_k^{-1}{\rm Cov}({\cal E}_k\,Y_j)
+      - \sum_{k=i+1}^{j-1}{\rm Cov}({\cal E}_i, {\cal E}_k)S_k^{-1}{\rm Cov}({\cal E}_k\,Y_j)\\
+    &= - \sum_{k=1}^{i-1}({\rm Cov}({\cal E}_k, {\cal E}_i))^\intercal S_k^{-1}{\rm Cov}({\cal E}_k\,Y_j)
+      - \sum_{k=i+1}^{j-1}{\rm Cov}({\cal E}_i, {\cal E}_k)S_k^{-1}{\rm Cov}({\cal E}_k\,Y_j)\\
+    &= 0.
 \end{aligned}
 $$
 {{< /math >}}
+Where the last equality follows from the assumption that 
+{{< math >}}${\rm Cov}({\cal E}_i, {\cal E}_k) = 0${{< /math >}} for
+$k = i + 1, \ldots, j - 1$.
 
 #### Proof of (I.3)
 Next, we show $(\text{I.3})$.
@@ -676,11 +698,12 @@ $$
 \end{aligned}
 $$
 {{< /math >}}
-The last equality corresponds to the $t$-th entry of the vector resulting form the matrix-vector multiplication
+The last equality corresponds to the $t$-th entry of the vector resulting from
 {{< math >}}$({\bf L}\,{\cal E}_{1:T})_t${{< /math >}}.
 So that
 {{< math >}}${\cal E}_t = Y_t + {\cal E}_t - ({\bf L}\,{\cal E}_{1:T})_t${{< /math >}}.
-Then, we can write innovation vector as
+
+Finally, write the innovation vector as
 {{< math >}}
 $$
 \begin{aligned}
@@ -692,7 +715,7 @@ $$
 {{< /math >}}
 
 #### Proof of (I.5)
-Finally, to show $(\text{I.5})$, note that
+Following $(\text{I.3})$, we have
 {{< math >}}
 $$
 \begin{aligned}
@@ -773,3 +796,5 @@ $$
 $$
 {{< /math >}}
 {{< math >}} $$ \ \tag*{$\blacksquare$} $$ {{< /math >}}
+
+[^eubank-rating]: It currently rates 2/5 stars in Amazon.
