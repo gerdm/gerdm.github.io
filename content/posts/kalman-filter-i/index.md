@@ -9,6 +9,11 @@ tldr: "An introduction to signal-plus-noise models and their best linear unbiase
 ---
 
 # Introduction
+The Kalman filter is well known for its ability to efficiently compute the hidden state of a system based on noisy observations.
+From spacecraft navigation to financial market predictions, and even in the training of neural networks,
+it finds use in a broad array of fields.
+Yet, despite its practical success, one might be surprised to learn how many simplifying assumptions are required to derive the Kalman filter from a purely mathematical standpoint.
+
 I was first introduced to the Kalman filter as a computationally-efficient way to
 compute the posterior distribution over the latent (state) space given a sequence of measurables.
 This is the perspective that I have been studying for a few years now.
@@ -20,21 +25,23 @@ Despite the not-so-well received perception of the book by some metrics,[^eubank
 it contains some important lessons about how the KF is derived.
 In particular, it was surprising to me to learn just how much we have to assume in order to derive the KF from this
 *no-frills* perspective.
-More surprising still is that in practice, despite all these assumptions (many of which do not necessarily hold in practice),
-the KF *just works*.
+What is even more surprising is how well the Kalman filter works in practice, even when many of these theoretical assumptions don’t hold.
+This raises a key question: why does the Kalman filter perform so robustly in real-world scenarios that deviate from the idealised models?
 
-In these series of post, I summarise the most important lessons that I drew from the book.
+In these series of post, I summarise important lessons that I drew from the KF.
 Each post contains a section on the theory, some motivation on the decision that we make,
 and a final example, where we put theory into practice.
 
-## The first part
-In this first post, I present signal-plus-noise models.
-With few assumptions on the data generating process (DGP),
-the best-linear-unbiased estimate for signals-plus-noise models is derived.
-We then modify the result to make use of *innovations* to make the computation of the BLUP more efficient.
-We then present filtering, smoothing, prediction, and fixed-lag-smoothing as computing the BLUP
-on different timeframes.
-This post concludes by introducing a data-driven-approach to compute the BLUP over varying timeframes.
+
+## The First Part
+In this first post, I introduce signal-plus-noise models.
+With only a few assumptions about the data-generating process (DGP),
+we derive the best linear unbiased estimate (BLUP) for these models.
+We then adjust this result by incorporating *innovations*, which allows us to compute the BLUP more efficiently.
+
+Next, we explore how filtering, smoothing, prediction, and fixed-lag smoothing can be viewed as applications of the BLUP over different timeframes.
+This post concludes by presenting a data-driven approach to compute the BLUP across these varying timeframes.
+
 
 # Signal plus noise models
 The story of the Kalman filter begins with signal plus noise models.
@@ -288,15 +295,42 @@ Equation $(\text{BLUP.2})$ highlights a key property when working with innovatio
 the number of computations to estimate $F_{t|j}$ becomes *linear* in time.
 Furthermore, computing $(\text{BLUP.2})$ now requires $O(j d^3)$ operations.
 
-# Filtering, prediction, smoothing, and fixed-lag smoothing
-Recall that our quantity of interest takes the form $(\text{BLUP.2})$,
-which is determined by our frame of reference $j$.
-As a consequence, it determines the amount of information we need to take before making an estimate of the signal process at time $t$.
+# From Random Variables to Samples
 
-In this section, we classify various BLUP estimates $f_{t|j}$ as a function of the frame of reference $j$.
-As we will see, the choice of $j$ can serve different purposes.
+In previous sections, we discussed how a signal-plus-noise measurement process,
+$Y_{1:T} = F_{1:T} + E_{1:T}$,
+can be transformed into a *decorrelated innovation process*
+{{< math >}}${\cal E}_{1:T}${{< /math >}}.
+This innovation process allows us to compute the **best linear unbiased predictor** (BLUP) for the signal at time $t$, based on information available up to time $j$ — denoted $F_{t|j}$. Importantly, the computation of this predictor is *linear* with respect to $j$.
 
-## Filtering
+Now, let's assume we have a *training* phase where we are given the quantities
+{{< math >}}${\bf L}${{< /math >}} and
+{{< math >}}${\bf K}_{t,k}${{< /math >}} for
+{{< math >}}$(t,k)\in{\cal T}^2${{< /math >}},
+and a *test* phase, where we are given a sample
+of the signal-plus-noise process $y_{1:T} = f_{1:T} + e_{1:T}$.
+
+In this test phase, we no longer have direct access to either the signal $f_{1:T}$ or noise $e_{1:T}$ processes.
+Instead, we must rely on estimates derived from the BLUP formula $(\text{BLUP.2})$ using the measurement $y_{1:j}$.
+Here's how the process works:
+
+1. *Transform the measurements to innovations* using equation $(\text{I.3})$:  
+    {{< math >}}$\varepsilon_{1:T} = {\bf L}^{-1}\, y_{1:T}${{< /math >}}
+   
+2. **Estimate the BLUP for the signal** at time $t$, based on the innovations up to time $j$ following $(\text{BLUP.2})$:  
+   $f_{t|j} = \sum_{k=1}^j {\bf K}_{t,k}\,\varepsilon_k$
+
+The value of $j$ — the "frame of reference" — determines how much information from the past we are using to estimate the signal at time $t$. Consequently, different choices of $j$ will result in different BLUP estimates, which reflects varying amounts of information considered when making a prediction.
+
+## Filtering, Prediction, Smoothing, and Fixed-Lag Smoothing
+Having access to the innovation vector $\varepsilon_{1:j}$, the BLUP estimate $f_{t|j}$ can be classified based on the choice of $j$. Each choice of $j$ corresponds to a different estimation approach, such as:
+
+- **Filtering**: Using all available data up to time $j=t$.
+- **Prediction**: Estimating future values ($t > j$).
+- **Smoothing**: Refining past estimates by incorporating data beyond $t$ ($j > t$).
+- **Fixed-lag smoothing**: A compromise, where past estimates are updated based on a limited window of future data ($j = t + L$, with fixed $L$).
+
+### Filtering
 The term filtering refers to the action of *filtering-out* the noise $e_t$ to estimate the signal $f_t$.
 Filtering is defined as
 {{< math >}}
@@ -328,7 +362,7 @@ $$
 {{< /math >}}
 As we see, filtering considers all measurements up to time $t$ to make an estimate of the signal at time $t$.
 
-## Prediction
+### Prediction
 This quantity estimates the expected future signal $f_{t+i}$, given $y_{1:t}$.
 Here, $i \geq 1$.
 
@@ -357,7 +391,7 @@ $$
 As shown in the table above, a two-step-ahead prediction at time $t$ considers all measurements up to time $t$ to
 make an estimate of the signal at time $t+2$.
 
-## Smoothing
+### Smoothing
 This quantity refers to the estimate of $f_t$ having observed a full run of the experiment $y_{1:T}$.
 Contrary to the filtering equation $(\text{F.1})$, which is *online*, the smoothing operation
 waits until all measurements have been observed to make an estimate of the signal.
@@ -389,7 +423,7 @@ There is a more computationally-efficient way to estimate ($\text{F.3}$),
 which we will see in a later post.
 
 
-## Fixed-lag smoothing
+### Fixed-lag smoothing
 This quantity is a middle ground between filtering, which is *online*, and smoothing, which is *offline*.
 The idea behind an $i$-step fixed-lag smoothing is to estimate the signal $f_t$ after observing $y_{1:t+i}$.
 That is, we must wait $i$ steps, before making an estimate of the signal $f_t$.
@@ -457,7 +491,7 @@ $\sigma_f^2, \sigma_y^2 > 0$,
 $\Delta \in (0, 1)$, and
 $\alpha, \beta, \gamma, \delta$ values in the interval $(0,1)$.
 
-## The setup
+### The setup
 Consider samples of the sytem $(\text{LV.1})$ above with the following parameters:
 $\alpha = 2/3$,
 $\beta = 4/3$,
