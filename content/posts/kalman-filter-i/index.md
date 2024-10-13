@@ -327,8 +327,10 @@ Having access to the innovation vector $\varepsilon_{1:j}$, the BLUP estimate $f
 
 - **Filtering**: Using all available data up to time $j=t$.
 - **Prediction**: Estimating future values ($t > j$).
-- **Smoothing**: Refining past estimates by incorporating data beyond $t$ ($j > t$).
+- **Smoothing**: Refining past estimates by incorporating all data in the sample run ($j \leq T$).
 - **Fixed-lag smoothing**: A compromise, where past estimates are updated based on a limited window of future data ($j = t + L$, with fixed $L$).
+
+We describe these quantities in more detail below.
 
 ### Filtering
 The term filtering refers to the action of *filtering-out* the noise $e_t$ to estimate the signal $f_t$.
@@ -345,7 +347,7 @@ Given a run of the experiment ran up to time $t$, filtering produces (online) es
 given the measurements $y_{1:t}$.
 
 We exemplify filtering in the table below.
-The top row shows the point in time in which the estimate is computed;
+The top row shows the point in time in which the BLUP is estimated;
 the *signal* row shows in $\color{#00B7EB}\text{cyan}$ the target signal that we seek to estimate from the measurements;
 finally the bottom row shows in $\color{orange}\text{orange}$ the measurements to consider to estimate the BLUP.
 
@@ -366,7 +368,7 @@ As we see, filtering considers all measurements up to time $t$ to make an estima
 This quantity estimates the expected future signal $f_{t+i}$, given $y_{1:t}$.
 Here, $i \geq 1$.
 
-We define an $i$-th step prediction prediction as 
+We define an $i$-th step ahead prediction prediction as 
 {{< math >}}
 $$
 \tag{F.2}
@@ -388,7 +390,7 @@ $$
 \end{array}
 $$
 {{< /math >}}
-As shown in the table above, a two-step-ahead prediction at time $t$ considers all measurements up to time $t$ to
+As shown in the table above, a two-step-ahead prediction considers all measurements up to time $t$ to
 make an estimate of the signal at time $t+2$.
 
 ### Smoothing
@@ -489,7 +491,7 @@ $\varphi_{t,j} \sim {\cal N}(0, \sigma_y^2)$,
 $(i,j) \in \{0,1\}^2$,
 $\sigma_f^2, \sigma_y^2 > 0$,
 $\Delta \in (0, 1)$, and
-$\alpha, \beta, \gamma, \delta$ values in the interval $(0,1)$.
+$\alpha, \beta, \gamma, \delta$ values in the $(0,1)$ interval.
 
 ### The setup
 Consider samples of the sytem $(\text{LV.1})$ above with the following parameters:
@@ -519,24 +521,39 @@ corresponding to the 1500 steps of the process, two dimensions, and 2000 samples
 ### Computation of innovations
 We begin by estimating the matrix ${\bf L}$. Recall from $(\text{I.3})$ that
 {{< math >}}${\rm Var}(Y_{1:T}) = {\bf L}\,{\bf S}\,{\bf L}^\intercal${{< /math >}}.
-This can be estimated in einsum form as
+Then, we approximate the variance of the measurement process as
+
+{{< math >}}
+$$
+\begin{aligned}
+    {\rm Var}(Y_{1:T})
+    &= \mathbb{E}[(Y_{1:T})(Y_{1:T})^\intercal]\\
+    &\approx \frac{1}{S}\sum_{s=1}^S \left(y_{1:T}^{(s)} - \bar{y}_{1:T}\right)\,\left(y_{1:T}^{(s)} - \bar{y}_{1:T}\right)^\intercal\\
+    &= \frac{1}{S}\sum_{s=1}^S \left(y_{1:T}^{(s)}\right)\,\left(y_{1:T}^{(s)}\right)^\intercal,
+\end{aligned}
+$$
+{{< /math >}}
+where we make use of the fact that the sample mean is zero by construction, i.e.,
+{{< math >}}$\bar{y}_{1:T} = \frac{1}{S}\sum_s y_{1:T}^{(s)} = 0${{< /math >}}.
+
 ```
 V = np.einsum("tds,kds->dtk", y_sims, y_sims) / (n_sims - 1)
 ```
-Next, the terms ${\bf L}$ and ${\bf S}$ are estimated by
+Next, the terms ${\bf L}$ and ${\bf S}$ are estimated by following a Cholesky decomposition
 ```
-L = np.linalg.cholesky(V)
-S = np.einsum("dtt->dt", L)
-L = np.einsum("dtk,dk->dtk", L, 1 / S)
-S = S ** 2
+L = np.linalg.cholesky(V) # Cholesky decomposition of the variance
+S = np.einsum("dtt->dt", L) # S-terms are diagonal of the output
+L = np.einsum("dtk,dk->dtk", L, 1 / S) # Make diagonal be 1-valued 
+S = S ** 2 # Make variance
 ```
 
-Finally, the innovations derived from the samples `y_sims` are estimated by
+Finally, we estimate the innovations derived from the samples `y_sims` and the matrix `L`:
 ```
-ve_sims = np.linalg.solve(L, einops.rearrange(y_sims, "t d s -> d t s"))
-ve_sims = einops.rearrange(ve_sims, "d t s -> t d s")
+ve_sims = einops.rearrange(y_sims, "t d s -> d t s") # Place in dims to solve system
+ve_sims = np.linalg.solve(L, ve_sims) # Solve system, obtain innovations
+ve_sims = einops.rearrange(ve_sims, "d t s -> t d s") # Match dimension ordering of measurements
 ```
-This corresponds to $(\text{I.2})$.
+This block of code corresponds to $(\text{I.3})$.
 
 ### Computation of the gain matrices
 For the gain matrices, we obtain
@@ -546,53 +563,85 @@ $$
     {\bf K}_{t,k}
     &= {\rm Cov}(F_t, {\cal E}_k)\,S_k^{-1}\\
     &= {\rm Cov}(F_t, {\cal E}_k)\,{\rm Var}({\cal E}_k)^{-1}\\
-    &\approx\left(\frac{1}{S}\sum_{s=1}^S\left(f_t^{(s)} - \bar{f}_t\right)\,\left(\varepsilon_k^{(s)} - \bar{\varepsilon}_k\right)^\intercal\right)\,S_k^{-1}
+    &\approx\left(\frac{1}{S}\sum_{s=1}^S\left(f_t^{(s)} - \bar{f}_t\right)\,\left(\varepsilon_k^{(s)} - \bar{\varepsilon}_k\right)^\intercal\right)\,S_k^{-1}\\
+    &\approx\frac{1}{S}\sum_{s=1}^S\left(f_t^{(s)}\right)\,\left(\varepsilon_k^{(s)}\right)^\intercal\,S_k^{-1},
 \end{aligned}
 $$
 {{< /math >}}
+where the last line makes use of $\bar{f}_t = \bar{\varepsilon}_k = 0$ for all $(t,k)  \in {\cal T}^2$.
 
-This quantity is estimated by
+We approximate the collection of gain matrices by
 ```
 K = np.einsum("tds,kds,dk->tkd", f_sims, ve_sims, 1 / S) / (n_sims - 1)
 ```
-The following Figure shows the gain matrices ${\bf K}_{t,k,i}$ for $i=1,2$, corresponding to the $x$ and $y$ coordinates
+The next Figure shows the gain matrices ${\bf K}_{t,k,i}$ for $i=1,2$, corresponding to the $x$ and $y$ coordinates
 of the process.
 ![kalman-gain](./gain-matrix-sample.png)
 
 We observe that in each panel, the values below the diagonal have non-zero values for $K_{t,k,i}$,
-whereas values above the diagonal are mostly zero.
+whereas values above the diagonal are close to zero.
 This suggests that, for any two points in time $t$ and $k$, with $t$ being the *target* index and $k$ the
 frame of reference, having $k < t$ provides information to the estimate of $t$.
-Conversely, the information from $k > t$ is almost none.
+Conversely, the information from $k > t$ is significantly much smaller than that from $k < t$.
 
 ## Test phase
 Having computed `K` and `L`, we are now able to evaluate the BLUP estimates $(\text{F.1 -- F.4})$
 on an unseen run `ve_test_sim` with `ve_test_sim.shape == (1500, 2)`.
+We consider the run below.
 ![sample-run](./sample-run.png)
 
 ### Filter
+Here, we compute the BLUP corresponding to the filter estimate, i.e., $k=t$.
+Because we assume that we have access to $y_{1:T}$, we compute the filter estimate by
+we make use of *masking*, i.e.,
+{{< math >}}
+$$
+\begin{aligned}
+    f_{t|T}
+    &= \sum_{k=1}^t{\bf K}_{t,k}\,\varepsilon_k\\
+    &= \sum_{k=1}^T{\bf K}_{t,k}\,\varepsilon_k\,{\bf 1}(k \leq t).
+\end{aligned}
+$$
+{{< /math >}}
 
+This takes the form
 ```
 tmask = np.tril(np.ones((T, T)), k=0)
 latent_filter = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
 ```
+The image below shows the filtering of the true (latent) signal (in black)
+and the filtered signal (in orange).
 ![test-filter](./test-sample-filter.png)
 
 ### Smoothing
+Next, we consider the problem of smoothing.
+This can be written as a straightforward modification of the code-block above,
+in which we remove the masking element. We obtain
 ```
 latent_smooth = np.einsum("tkd,kd->td", K, ve_test_sim)
 ```
 ![test-smooth](./test-sample-smooth.png)
+We observe that, relative to the smoothing exercise, the recovered signal has much less variance.
 
 ### Prediction
+Here, we consider the problem of five-step-ahead prediction.
+Prediction can be written as a modified 
 ```
 tmask = np.tril(np.ones((n_steps, n_steps)), k=-5)
 latent_pred = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
 ```
 ![test-smooth](./test-sample-prediction.png)
 
-
 ### Varying lag
+{{< math >}}
+$$
+    E(t) = \sqrt{\frac{1}{2}\sum_{k=1}^t\|f_t - f_{t|k}\|^2}
+$$
+{{< /math >}}
+![test-varying-lag-err](./test-sample-errs.png)
+
+### Multiple simulations
+
 ![test-varying-err](errs-sample-lag.png)
 
 
