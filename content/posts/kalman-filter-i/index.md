@@ -633,17 +633,26 @@ latent_pred = np.einsum("tkd,kd,tk->td", K, ve_test_sim, tmask)
 ![test-smooth](./test-sample-prediction.png)
 
 ### Varying lag
+In this experiment, we plot the cumulative RMSE as a function of time $t$ and as a
+function of lag $k$.
+We define the cumulative RMSE at time $t$, under lag $k$ as 
 {{< math >}}
 $$
-    E(t) = \sqrt{\frac{1}{2}\sum_{k=1}^t\|f_t - f_{t|k}\|^2}
+    E_k(t) = \left(\frac{1}{t}\sum_{\tau=1}^t\|f_\tau - f_{\tau|k}\|^2\right)^{1/2}
 $$
 {{< /math >}}
+The plot below shows $E_k(t)$ 
 ![test-varying-lag-err](./test-sample-errs.png)
+The black line $k=0$ corresponds to filtering.
+We observe that lags $k< 0$ have higher RMSE than $k=0$ --- these correspond to prediction.
+On the other hand lags $k > 0$ have higher rmse than $k = 0$ --- these correspond to fixed-lag smoothing.
 
 ### Multiple simulations
-
+Here, we repeat the above experiment for multiple samples.
+We run multiple trials of $(\text{LV.1})$, compute $E_k(T)$ for each of the samples,
+and plot the average RMSE across samples.
 ![test-varying-err](errs-sample-lag.png)
-
+As expected, prediction ($k < 0$) incurs in higher RMSE than fixed-lag smoothing ($k > 0$).
 
 ---
 
