@@ -15,7 +15,7 @@ it finds use in a broad array of fields.
 Yet, despite its practical success, one might be surprised to learn how many simplifying assumptions are required to derive the Kalman filter from a purely mathematical standpoint.
 
 I was first introduced to the Kalman filter as a computationally-efficient way to
-compute the posterior distribution over the latent (state) space given a sequence of measurables.
+compute the posterior distribution over the latent (state) space given a sequence of observations.
 This is the perspective that I have been studying for a few years now.
 
 A few months ago, however, I came across the "Kalman filter primer" book by Randall L. Eubank ---
@@ -25,11 +25,9 @@ Despite the not-so-well received perception of the book by some metrics,[^eubank
 it contains some important lessons about how the KF is derived.
 In particular, it was surprising to me to learn just how much we have to assume in order to derive the KF from this
 *no-frills* perspective.
-What is even more surprising is how well the Kalman filter works in practice, even when many of these theoretical assumptions don’t hold.
-This raises a key question: why does the Kalman filter perform so robustly in real-world scenarios that deviate from the idealised models?
 
 In these series of post, I summarise important lessons that I drew from the KF.
-Each post contains a section on the theory, some motivation on the decision that we make,
+Each post contains a section on the theory, some motivation on the modelling decisions,
 and a final example, where we put theory into practice.
 
 
@@ -653,6 +651,12 @@ We run multiple trials of $(\text{LV.1})$, compute $E_k(T)$ for each of the samp
 and plot the average RMSE across samples.
 ![test-varying-err](errs-sample-lag.png)
 As expected, prediction ($k < 0$) incurs in higher RMSE than fixed-lag smoothing ($k > 0$).
+
+# Conclusion
+In this post, we introduced signal plus noise models and their best linear unbiased predictions (BLUP).
+We introduced the concept of an innovation to decorrelate the measurements and and arrive at an efficient formula
+for the BLUP that dependends on a frame of reference.
+Depending on the frame of reference, we arrive at filtering, smoothing, prediction, and fixed-lag smoothing.
 
 ---
 
