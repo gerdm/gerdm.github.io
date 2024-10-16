@@ -4,7 +4,7 @@ date: 2024-08-04
 description: "Primer on the Kalman filter primer."
 katex: true
 draft: true
-tags: [kalman-filter, summary]
+tags: [kalman-filter, summary, kf-notes]
 tldr: "An introduction to signal-plus-noise models and their best linear unbiased estimates."
 ---
 
@@ -653,9 +653,11 @@ and plot the average RMSE across samples.
 As expected, prediction ($k < 0$) incurs in higher RMSE than fixed-lag smoothing ($k > 0$).
 
 # Conclusion
-In this post, we introduced signal plus noise models and their best linear unbiased predictions (BLUP).
-We introduced the concept of an innovation to decorrelate the measurements and and arrive at an efficient formula
-for the BLUP that dependends on a frame of reference.
+In this post,
+(i) we introduced signal plus noise models and their best linear unbiased predictions (BLUP),
+(ii) we introduced the concept of an innovation to decompose the measurements, and
+(iii) we made use of the innovations to arrive at linear-in-time formulas to compute the BLUP.
+We showed that an important quantity of the blup BLUP is its _frame of reference_.
 Depending on the frame of reference, we arrive at filtering, smoothing, prediction, and fixed-lag smoothing.
 
 ---
